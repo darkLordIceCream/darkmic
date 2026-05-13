@@ -3,7 +3,8 @@
 ## Current State | 当前状态
 
 **Last Updated | 最后更新:** 2026-05-13
-**Active Feature | 当前功能:** F-002 (done | 完成)
+**Session | 会话:** Phase 1 kickoff — F-001 + F-002 完成
+**Active Feature | 当前功能:** (none — F-002 merged, F-003 pending | F-002 已合并，F-003 待开始)
 
 ## Status | 状态
 
@@ -63,7 +64,10 @@
 
 - `public/client.js` — Full WebCodecs AudioEncoder + WebSocket implementation | WebCodecs 编码 + WebSocket 发送
 - `public/index.html` — Stats display, status improvements | 统计显示、状态优化
-- `src/index.ts` — Chunk logging + disconnect summary, removed audio.ts import | 数据块日志，移除 audio.ts 引用
+- `src/index.ts` — Chunk logging + LAN IP display, disconnect summary | 数据块日志、LAN IP 显示、断开汇总
+- `AGENTS.md` — Architecture doc (WebCodecs, PC-side clarification, packaging plan) | 架构文档更新
+- `feature_list.json` — 8 features with Chinese descriptions | 8 个功能及中文描述
+- `progress.md` — Session tracking | 会话追踪
 
 ## Evidence of Completion | 完成证据
 
@@ -75,5 +79,10 @@
 
 ## Notes for Next Session | 下次会话备注
 
-- Start F-002: phone-side WebCodecs AudioEncoder + WebSocket send loop | 开始 F-002：手机端 WebCodecs 编码 + WebSocket 发送
-- Verify encoded opus chunks arrive on server | 通过控制台日志验证 opus 编码块到达
+- **F-003 is next**: Server audio decode → VB-Cable
+  - Prerequisites on Windows: `winget install ffmpeg sox`
+  - Rewrite `src/audio.ts` to spawn FFmpeg, pipe opus chunks → PCM → VB-Cable
+  - Re-integrate audio pipe into `src/index.ts` WebSocket handler
+  - E2E verification: phone mic → PC hears audio
+- **Branch to use**: `main` (F-002 merged)
+- **Architecture decision to verify**: raw opus `-f opus` pipe compatibility with FFmpeg
