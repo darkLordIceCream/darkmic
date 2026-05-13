@@ -17,8 +17,8 @@
       "description": "HTTPS server serving phone UI page, WebSocket server accepting connections. Phone page: getUserMedia → MediaStreamTrackProcessor → AudioEncoder (opus) → ws.send encoded chunks. Verify chunks arrive server-side.",
       "descriptionZh": "手机采集麦克风 → WebCodecs AudioEncoder 编码 opus → WebSocket 发送编码块到服务端",
       "dependencies": ["F-001"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "E2E test: 5 binary chunks sent, server logged chunk #1-5 with byte counts, disconnect summary. Typecheck + build + server start all pass. 2026-05-13"
     },
     {
       "id": "F-003",
