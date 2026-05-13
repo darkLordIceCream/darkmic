@@ -2,8 +2,9 @@
   "name": "darkmic",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.8.0",
   "type": "module",
-  "description": "Phone-as-microphone for PC via Chrome browser",
+  "description": "Phone-as-microphone for PC via Chrome browser | 手机做电脑麦克风",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",

@@ -3,7 +3,9 @@
     {
       "id": "F-001",
       "name": "Project scaffold + HTTPS certs",
-      "description": "Initialize Node.js/TypeScript project structure, install dependencies (ws, express, fluent-ffmpeg, mkcert), generate dev SSL certs, set up tsconfig and basic dev scripts",
+      "nameZh": "项目脚手架 + HTTPS 证书",
+      "description": "Initialize Node.js/TypeScript project structure, install dependencies (ws, express), generate dev SSL certs, set up tsconfig and basic dev scripts",
+      "descriptionZh": "初始化项目结构，安装依赖，生成自签名 HTTPS 证书，配置 TypeScript 和开发脚本",
       "dependencies": [],
       "status": "done",
       "evidence": "init.sh passes (install, typecheck, build). Server starts, generates self-signed certs, serves HTTPS on :3000. 2026-05-13"
@@ -11,7 +13,9 @@
     {
       "id": "F-002",
       "name": "WebSocket server + phone client",
+      "nameZh": "WebSocket 服务端 + 手机客户端",
       "description": "HTTPS server serving phone UI page, WebSocket server accepting connections. Phone page: getUserMedia → MediaRecorder (opus, 20ms slices) → ws.send binary chunks. Verify chunks arrive server-side.",
+      "descriptionZh": "手机页面采集麦克风 → MediaRecorder 编码 → WebSocket 发送 opus 数据块到服务端",
       "dependencies": ["F-001"],
       "status": "not-started",
       "evidence": ""
@@ -19,7 +23,9 @@
     {
       "id": "F-003",
       "name": "Server audio decode → virtual mic",
+      "nameZh": "服务端音频解码 → 虚拟麦克风",
       "description": "Pipe incoming opus chunks through FFmpeg (decode to PCM), write to virtual audio device (BlackHole on macOS, VB-Cable on Windows). End-to-end audio flow working.",
+      "descriptionZh": "Opus 数据通过 FFmpeg 解码为 PCM，写入虚拟声卡（BlackHole/VB-Cable），实现端到端音频通路",
       "dependencies": ["F-002"],
       "status": "not-started",
       "evidence": ""
@@ -27,7 +33,9 @@
     {
       "id": "F-004",
       "name": "Connection UX + error handling",
+      "nameZh": "连接体验 + 错误处理",
       "description": "QR code on PC page for phone to scan, connection status display, auto-reconnect on WebSocket disconnect, mic permission error handling, start/stop controls on phone UI",
+      "descriptionZh": "电脑页面显示二维码供手机扫描，连接状态提示，断线自动重连，麦克风权限错误处理，开始/停止控制",
       "dependencies": ["F-003"],
       "status": "not-started",
       "evidence": ""
@@ -35,7 +43,9 @@
     {
       "id": "F-005",
       "name": "Latency tuning + quality controls",
+      "nameZh": "延迟调优 + 质量控制",
       "description": "Tweak MediaRecorder timeslice, FFmpeg buffer params, Opus bitrate. Add basic quality selector (voice/music). Measure and document end-to-end latency.",
+      "descriptionZh": "调整 MediaRecorder 切片时间、FFmpeg 缓冲参数、Opus 比特率。添加音质选择器，测量端到端延迟",
       "dependencies": ["F-004"],
       "status": "not-started",
       "evidence": ""
@@ -43,7 +53,9 @@
     {
       "id": "F-006",
       "name": "WebRTC P2P transport (optional)",
+      "nameZh": "WebRTC P2P 传输（可选）",
       "description": "Replace MediaRecorder + WS with RTCPeerConnection for lower latency. Phone sends MediaStreamTrack directly. Server uses werift (TS WebRTC) to receive. Keep WS for signaling only.",
+      "descriptionZh": "将 MediaRecorder + WebSocket 替换为 RTCPeerConnection 以降低延迟。手机直接发送 MediaStreamTrack，服务端通过 werift 接收，WebSocket 仅用于信令",
       "dependencies": ["F-004"],
       "status": "deferred",
       "evidence": ""
