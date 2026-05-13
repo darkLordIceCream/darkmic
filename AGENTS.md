@@ -6,26 +6,41 @@ Phone-as-microphone for PC via Chrome browser. Phone captures mic audio via `get
 
 ## Architecture | 架构
 
-### Phase 1 (target): MediaRecorder + WebSocket
+### How it works — 工作方式
+
+PC runs a Node.js server (the "app"). Phone opens the server's page in Chrome browser. Audio flows one-way: phone → PC.
+
+> PC 运行 Node.js 服务端（即"应用本身"），手机用 Chrome 浏览器打开服务器页面，音频单向从手机流到电脑。
 
 ```
-Phone (Chrome)                    PC (Node.js)
-┌────────────────────┐          ┌──────────────────────────┐
-│ GET / → index.html │  HTTPS  │ Express/Koa server        │
-│ getUserMedia       │ ◄─────► │ → serves static pages     │
-│ → MediaRecorder     │          │ → WebSocket server (ws)  │
-│   (opus 20ms)      │  WS     │ → receives opus chunks    │
-│ → ws.send(chunk)   │ ──────► │ → FFmpeg decode → PCM    │
-│                    │          │ → pipe to virtual mic     │
-└────────────────────┘          │   (VB-Cable)             │
-                                └──────────────────────────┘
+Phone / iPad (Chrome)                 Windows PC (darkmic.exe)
+┌─────────────────────┐             ┌────────────────────────────┐
+│ 打开服务器页面        │   HTTPS    │  Node.js Server            │
+│ getUserMedia         │  ◄─────── │  → 提供手机端页面            │
+│ → MediaStreamTrack   │             │  → 提供 PC 状态页 (二维码)   │
+│ → AudioEncoder(opus) │   WS       │  → WebSocket 接收编码数据    │
+│ → ws.send(chunk)     │  ───────► │  → FFmpeg 解码 opus → PCM   │
+│                      │            │  → pipe → VB-Cable 虚拟声卡  │
+└─────────────────────┘             └────────────────────────────┘
+                                           ↑
+                                     PC 浏览器打开
+                                   localhost:3000 看状态
 ```
 
-> Phase 1 使用 MediaRecorder + WebSocket，实现简单可靠，安卓/iPad Chrome 兼容性好。Phase 2（未来）按需切换到 WebRTC P2P 以降低延迟。
+### Phase 1 (target): WebCodecs AudioEncoder + WebSocket
+
+Phone uses `AudioEncoder` (WebCodecs API) to encode raw PCM → opus at ~10ms granularity, skipping MediaRecorder's container overhead and internal buffering. ~80ms end-to-end latency expected.
+
+> Phase 1 使用 WebCodecs AudioEncoder 编码音频，跳过 MediaRecorder 的容器包装和内部缓冲，延迟约 80ms。
+
+```
+Phone:  getUserMedia → MediaStreamTrackProcessor → AudioEncoder(opus) → WebSocket
+PC:     WebSocket → FFmpeg (raw opus) → PCM → VB-Cable
+```
 
 ### Phase 2 (future): WebRTC P2P (if latency requires)
 
-Same server infrastructure, swap transport: `RTCPeerConnection` instead of `MediaRecorder` chunks. Signaling stays on the same WebSocket.
+Same server infrastructure, swap transport: `RTCPeerConnection` instead of `AudioEncoder` chunks. Signaling stays on the same WebSocket.
 
 ## Packaging | 打包
 

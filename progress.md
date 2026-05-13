@@ -3,14 +3,14 @@
 ## Current State | 当前状态
 
 **Last Updated | 最后更新:** 2026-05-13
-**Active Feature | 当前功能:** F-001 (done | 完成)
+**Active Feature | 当前功能:** (none — document update | 无 — 文档更新)
 
 ## Status | 状态
 
 ### What's Done | 已完成
 
 - [x] AGENTS.md — Project harness with bilingual content | 项目框架（中英双语）
-- [x] feature_list.json — 6 features with Chinese descriptions | 6 个功能及中文描述
+- [x] feature_list.json — 8 features with Chinese descriptions | 8 个功能及中文描述
 - [x] init.sh — Verification pipeline | 验证管线
 - [x] progress.md — Session tracking | 会话追踪
 - [x] Remote repo connected: darkLordIceCream/darkmic (private | 私有)
@@ -31,11 +31,11 @@
 ### What's Next | 下一步
 
 1. **F-002: WebSocket server + phone client | WebSocket 服务端 + 手机客户端**
-   - Phone: getUserMedia → MediaRecorder (opus 20ms) → ws.send
+   - Phone: getUserMedia → MediaStreamTrackProcessor → AudioEncoder (opus) → ws.send
    - Server: receive chunks, log stats | 服务端接收数据块，记录统计
-   - Verify binary chunks flow end-to-end | 验证二进制数据端到端流通
-2. **F-007: Windows packaging** (after core audio pipeline works)
-   - Compile to .exe via pkg, bundle FFmpeg, create launcher
+   - Verify encoded opus chunks flow end-to-end | 验证 opus 编码块端到端流通
+2. **F-003: Server audio decode → virtual mic** (after F-002)
+   - FFmpeg decode raw opus → PCM → VB-Cable
 
 ## Blockers / Risks | 阻塞项 / 风险
 
@@ -43,8 +43,10 @@
 
 ## Decisions Made | 已做决策
 
-- **Transport: MediaRecorder + WebSocket first**: Lower complexity than WebRTC P2P, Chrome-only so API support is guaranteed. WebRTC deferred to F-006 if latency is insufficient.
-  > 传输方案先选 MediaRecorder + WebSocket，复杂度低，WebRTC 推迟到 F-006
+- **Transport: WebCodecs AudioEncoder + WebSocket**: Lower latency than MediaRecorder (~80ms vs ~150ms) by skipping WebM container and internal buffering. Uses `AudioEncoder` + `MediaStreamTrackProcessor`. WebRTC deferred to F-006 if latency still insufficient.
+  > 传输方案采用 WebCodecs AudioEncoder + WebSocket，延迟 ~80ms，跳过 MediaRecorder 容器包装，WebRTC 推迟到 F-006
+- **Node.js retained as server runtime**: After evaluating Rust/Go alternatives, Node.js is the right choice for this I/O-bound audio pipeline. Rust rewrite would increase dev time 3-5x for marginal latency gains. Node.js + pkg packaging is sufficient for distribution.
+  > 保持 Node.js，Rust 重写收益有限，对 I/O 密集的音频传输场景不划算
 - **Windows-first (VB-Cable)**: Target platform is Windows + VB-Cable virtual audio device. macOS not supported.
   > 目标平台 Windows + VB-Cable 虚拟声卡，不支持 macOS
 - **Packaging via pkg**: Server compiled into standalone .exe with @yao-pkg/pkg. FFmpeg bundled alongside. No Node.js needed on target machine.
@@ -80,5 +82,5 @@
 
 ## Notes for Next Session | 下次会话备注
 
-- Start F-002: phone-side MediaRecorder + WebSocket send loop | 开始 F-002：手机端采集 + WebSocket 发送
-- Verify chunks arrive on server via console logs | 通过控制台日志验证数据到达
+- Start F-002: phone-side WebCodecs AudioEncoder + WebSocket send loop | 开始 F-002：手机端 WebCodecs 编码 + WebSocket 发送
+- Verify encoded opus chunks arrive on server | 通过控制台日志验证 opus 编码块到达
