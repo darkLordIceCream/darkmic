@@ -1,8 +1,8 @@
 # AGENTS.md — darkmic
 
-Phone-as-microphone for PC via Chrome browser. Phone captures mic audio via `getUserMedia` → streams over local network → PC receives and pipes to virtual audio device (BlackHole/VB-Cable).
+Phone-as-microphone for PC via Chrome browser. Phone captures mic audio via `getUserMedia` → streams over local network → PC receives and pipes to virtual audio device (VB-Cable).
 
-> 手机做电脑麦克风。手机 Chrome 采集麦克风音频 → 局域网传输 → 电脑接收并输出到虚拟声卡。
+> 手机做电脑麦克风。手机/ iPad Chrome 采集麦克风音频 → 局域网传输 → Windows 电脑接收并输出到虚拟声卡 (VB-Cable)。
 
 ## Architecture | 架构
 
@@ -17,11 +17,11 @@ Phone (Chrome)                    PC (Node.js)
 │   (opus 20ms)      │  WS     │ → receives opus chunks    │
 │ → ws.send(chunk)   │ ──────► │ → FFmpeg decode → PCM    │
 │                    │          │ → pipe to virtual mic     │
-└────────────────────┘          │   (BlackHole / VB-Cable) │
+└────────────────────┘          │   (VB-Cable)             │
                                 └──────────────────────────┘
 ```
 
-> Phase 1 使用 MediaRecorder + WebSocket，实现简单可靠。Phase 2（未来）按需切换到 WebRTC P2P 以降低延迟。
+> Phase 1 使用 MediaRecorder + WebSocket，实现简单可靠，安卓/iPad Chrome 兼容性好。Phase 2（未来）按需切换到 WebRTC P2P 以降低延迟。
 
 ### Phase 2 (future): WebRTC P2P (if latency requires)
 
@@ -29,10 +29,10 @@ Same server infrastructure, swap transport: `RTCPeerConnection` instead of `Medi
 
 ## Constraints | 约束
 
-- **Chrome-only** (both phone and PC). No other browser testing needed. | 仅支持 Chrome，不做跨浏览器兼容
+- **Chrome-only** (Android phone, iPad, Windows PC). No other browser testing needed. | 仅支持 Chrome（安卓手机 / iPad / Windows），不做跨浏览器兼容
 - **Local network only** — same subnet, no STUN/TURN. | 仅局域网，不处理 NAT 穿透
 - **HTTPS required** — use `mkcert` for local dev certs. | 必须 HTTPS，本地用 `mkcert` 生成证书
-- **macOS primary** (BlackHole for virtual mic). Windows via VB-Cable if needed. | 优先 macOS + BlackHole
+- **Windows + VB-Cable**. macOS not supported. | Windows 平台 + VB-Cable 虚拟声卡，不支持 macOS
 
 ## Startup Workflow | 启动流程
 

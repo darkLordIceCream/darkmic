@@ -24,8 +24,8 @@
       "id": "F-003",
       "name": "Server audio decode → virtual mic",
       "nameZh": "服务端音频解码 → 虚拟麦克风",
-      "description": "Pipe incoming opus chunks through FFmpeg (decode to PCM), write to virtual audio device (BlackHole on macOS, VB-Cable on Windows). End-to-end audio flow working.",
-      "descriptionZh": "Opus 数据通过 FFmpeg 解码为 PCM，写入虚拟声卡（BlackHole/VB-Cable），实现端到端音频通路",
+      "description": "Pipe incoming opus chunks through FFmpeg (decode to PCM), write to virtual audio device (VB-Cable on Windows). End-to-end audio flow working.",
+      "descriptionZh": "Opus 数据通过 FFmpeg 解码为 PCM，写入虚拟声卡（VB-Cable），实现端到端音频通路",
       "dependencies": ["F-002"],
       "status": "not-started",
       "evidence": ""

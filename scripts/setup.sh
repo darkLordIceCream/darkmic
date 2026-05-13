@@ -2,30 +2,30 @@
 set -e
 
 echo "=== darkmic System Dependencies ==="
+echo "=== 系统依赖检查 ==="
 
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  echo "[macOS]"
+# Detect OS | 检测操作系统
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "mingw"* ]]; then
+  echo "[Windows]"
+  echo "  Make sure VB-Cable is installed: https://vb-audio.com/Cable/"
+  echo "  After install, set VB-Cable as the default recording device in Windows Sound settings."
 
-  # mkcert for trusted local HTTPS certs
+  # mkcert for trusted local HTTPS certs (optional)
   if ! command -v mkcert &> /dev/null; then
     echo "  mkcert: not found (optional — server uses self-signed certs)"
-    echo "  Install: brew install mkcert && mkcert -install"
+    echo "  Install: choco install mkcert  (or: winget install mkcert)"
   else
     echo "  mkcert: found"
   fi
 
-  # BlackHole for virtual audio device
-  if ! system_profiler SPAudioDataType 2>/dev/null | grep -q "BlackHole"; then
-    echo "  BlackHole: not found (needed for F-003 audio output)"
-    echo "  Install: brew install blackhole-2ch"
-  else
-    echo "  BlackHole: found"
-  fi
-elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
-  echo "[Windows]"
-  echo "  VB-Cable: install from https://vb-audio.com/Cable/"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+  echo "[macOS]"
+  echo "  Warning: macOS is not a supported target for this project."
+  echo "  The server will still run, but audio output requires VB-Cable."
+  echo "  VB-Cable is available for macOS too: https://vb-audio.com/Cable/"
 else
-  echo "[$OSTYPE] — unsupported for virtual audio device"
+  echo "[$OSTYPE] — not tested. VB-Cable required for audio output."
 fi
 
-echo "=== Setup check complete ==="
+echo ""
+echo "=== Setup check complete | 检查完成 ==="

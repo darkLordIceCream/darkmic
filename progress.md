@@ -43,8 +43,8 @@
 
 - **Transport: MediaRecorder + WebSocket first**: Lower complexity than WebRTC P2P, Chrome-only so API support is guaranteed. WebRTC deferred to F-006 if latency is insufficient.
   > 传输方案先选 MediaRecorder + WebSocket，复杂度低，WebRTC 推迟到 F-006
-- **macOS-first, Windows follow-up**: Developer uses macOS + BlackHole. VB-Cable support added on request.
-  > 优先 macOS，Windows 按需支持
+- **Windows-first (VB-Cable)**: Target platform is Windows + VB-Cable virtual audio device. macOS not supported.
+  > 目标平台 Windows + VB-Cable 虚拟声卡，不支持 macOS
 - **Chrome-only**: No cross-browser testing scope | 仅 Chrome，不做跨浏览器
 - **No TURN/STUN**: Local network only | 仅局域网，不需要 NAT 穿透
 - **Self-signed certs via openssl**: No npm dependency for cert generation | 用 openssl 自签证书，不引入 npm 依赖
