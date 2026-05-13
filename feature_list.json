@@ -5,8 +5,8 @@
       "name": "Project scaffold + HTTPS certs",
       "description": "Initialize Node.js/TypeScript project structure, install dependencies (ws, express, fluent-ffmpeg, mkcert), generate dev SSL certs, set up tsconfig and basic dev scripts",
       "dependencies": [],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "init.sh passes (install, typecheck, build). Server starts, generates self-signed certs, serves HTTPS on :3000. 2026-05-13"
     },
     {
       "id": "F-002",

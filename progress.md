@@ -3,8 +3,8 @@
 ## Current State
 
 **Last Updated:** 2026-05-13
-**Session:** Project kickoff
-**Active Feature:** (none — phase 0: harness creation)
+**Session:** F-001 implementation
+**Active Feature:** F-001 (done)
 
 ## Status
 
@@ -15,21 +15,30 @@
 - [x] init.sh created with basic verification pipeline
 - [x] progress.md created for session continuity
 - [x] Remote repo connected: darkLordIceCream/darkmic (private)
+- [x] **F-001: Project scaffold + HTTPS certs**
+  - package.json with deps (express, ws, tsx, typescript)
+  - tsconfig.json (ES2022, NodeNext)
+  - src/index.ts: HTTPS server + WebSocket + Express static
+  - src/cert.ts: self-signed cert generation via openssl
+  - src/audio.ts: stub for F-003
+  - public/index.html + client.js: phone UI scaffold
+  - scripts/setup.sh, scripts/dev.sh
+  - Verified: npm install → typecheck → build → server start + cert gen
 
 ### What's In Progress
 
-- (none — harness scaffolding complete)
+- (none)
 
 ### What's Next
 
-1. Implement F-001: Project scaffold + HTTPS certs
-   - npm init, set up TypeScript, install deps
-   - Configure mkcert for local HTTPS
-   - Create basic dev scripts
+1. F-002: WebSocket server + phone client
+   - Phone: getUserMedia → MediaRecorder (opus 20ms) → ws.send
+   - Server: receive chunks, log stats
+   - Verify binary chunks flow end-to-end
 
 ## Blockers / Risks
 
-- (none yet)
+- (none)
 
 ## Decisions Made
 
@@ -37,6 +46,8 @@
 - **macOS-first, Windows follow-up**: Developer uses macOS + BlackHole. VB-Cable support added on request.
 - **Chrome-only**: No cross-browser testing scope.
 - **No TURN/STUN**: Local network only, not designing for NAT traversal.
+- **Self-signed certs via openssl**: No npm dependency for cert generation. Browser shows warning but works after user accepts.
+- **No mkcert dependency**: mkcert is optional — system openssl is sufficient. scripts/setup.sh documents mkcert as optional install.
 
 ## Files Modified This Session
 
@@ -44,11 +55,24 @@
 - `feature_list.json` — 6 features across MVP + optional WebRTC
 - `init.sh` — Verification pipeline script
 - `progress.md` — Session tracking file
+- `package.json` — Project manifest with deps
+- `tsconfig.json` — TypeScript config
+- `src/index.ts` — Server entry (HTTPS + WebSocket + Express)
+- `src/cert.ts` — Self-signed cert generation
+- `src/audio.ts` — Audio pipe stub (F-003 placeholder)
+- `public/index.html` — Phone UI skeleton
+- `public/client.js` — Phone client stub
+- `scripts/setup.sh` — System dependency check
+- `scripts/dev.sh` — Dev server launcher
+- `.gitignore` — Standard ignores
 
 ## Evidence of Completion
 
-- [ ] (no code yet to verify)
+- [x] `npm run typecheck` — clean
+- [x] `npm run build` — clean
+- [x] `./init.sh` — full pipeline passes
+- [x] Server starts, certs generated, HTTPS listening
 
 ## Notes for Next Session
 
-- First task: F-001 (scaffold + certs). After that, project will have real scripts to verify.
+- Start F-002: implement the phone-side MediaRecorder + WebSocket send loop, verify chunks arrive on server
