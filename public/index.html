@@ -12,9 +12,9 @@
       display: flex; justify-content: center; align-items: center;
       min-height: 100vh;
     }
-    .container { text-align: center; padding: 2rem; }
+    .container { text-align: center; padding: 2rem; width: 100%; }
     h1 { font-size: 2rem; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
-    p { color: #888; margin-bottom: 2rem; }
+    .subtitle { color: #888; margin-bottom: 2rem; font-size: 0.95rem; }
     button {
       font-size: 1.2rem; padding: 1rem 2rem; border-radius: 999px;
       border: none; cursor: pointer; background: #22c55e; color: #fff;
@@ -23,17 +23,19 @@
     button:active { background: #16a34a; }
     button.mic-off { background: #ef4444; }
     button.mic-off:active { background: #dc2625; }
-    .status { margin-top: 1.5rem; font-size: 0.9rem; color: #666; }
+    .status { margin-top: 1.5rem; font-size: 0.95rem; color: #666; }
     .status.connected { color: #22c55e; }
     .status.error { color: #ef4444; }
+    .stats { margin-top: 0.5rem; font-size: 0.85rem; color: #555; font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>darkmic</h1>
-    <p>Using this phone as your PC microphone</p>
+    <p class="subtitle">Using this phone as your PC microphone</p>
     <button id="micBtn">Start Microphone</button>
     <div id="status" class="status">Tap "Start Microphone" to begin</div>
+    <div id="stats" class="stats"></div>
   </div>
   <script src="/client.js"></script>
 </body>

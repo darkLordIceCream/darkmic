@@ -3,7 +3,7 @@
 ## Current State | 当前状态
 
 **Last Updated | 最后更新:** 2026-05-13
-**Active Feature | 当前功能:** (none — document update | 无 — 文档更新)
+**Active Feature | 当前功能:** F-002 (done | 完成)
 
 ## Status | 状态
 
@@ -23,6 +23,11 @@
   - public/index.html + client.js: phone UI scaffold | 手机 UI 骨架
   - scripts/setup.sh, scripts/dev.sh
   - Verified: pnpm install → typecheck → build → server start + cert gen | 已验证
+- [x] **F-002: WebSocket server + phone client | WebSocket 服务端 + 手机客户端**
+  - public/client.js: getUserMedia → MediaStreamTrackProcessor → AudioEncoder (opus) → ws.send
+  - public/index.html: Start/Stop button, status, stats display
+  - src/index.ts: chunk logging with seq + byte count, disconnect summary
+  - E2E test: 5 binary chunks → server logged #1-5 with correct byte totals
 
 ### What's In Progress | 进行中
 
@@ -30,12 +35,10 @@
 
 ### What's Next | 下一步
 
-1. **F-002: WebSocket server + phone client | WebSocket 服务端 + 手机客户端**
-   - Phone: getUserMedia → MediaStreamTrackProcessor → AudioEncoder (opus) → ws.send
-   - Server: receive chunks, log stats | 服务端接收数据块，记录统计
-   - Verify encoded opus chunks flow end-to-end | 验证 opus 编码块端到端流通
-2. **F-003: Server audio decode → virtual mic** (after F-002)
-   - FFmpeg decode raw opus → PCM → VB-Cable
+1. **F-003: Server audio decode → virtual mic | 服务端音频解码 → 虚拟麦克风**
+   - FFmpeg pipe receiving raw opus, decode to PCM, output to VB-Cable
+   - Wire into src/index.ts WebSocket handler
+   - E2E audio flow: phone mic → PC speakers via VB-Cable
 
 ## Blockers / Risks | 阻塞项 / 风险
 
@@ -58,20 +61,9 @@
 
 ## Files Modified This Session | 本次修改的文件
 
-- `AGENTS.md` — Bilingual harness | 双语框架
-- `feature_list.json` — Chinese descriptions added | 添加了中文描述
-- `init.sh` — pnpm + Chinese comments | pnpm + 中文注释
-- `progress.md` — Bilingual | 双语
-- `package.json` — pnpm config | pnpm 配置
-- `tsconfig.json` — TypeScript config | TypeScript 配置
-- `src/index.ts` — Server entry | 服务端入口
-- `src/cert.ts` — Cert generation | 证书生成
-- `src/audio.ts` — Audio pipe stub | 音频管线桩
-- `public/index.html` — Phone UI | 手机 UI
-- `public/client.js` — Phone client stub | 手机客户端桩
-- `scripts/setup.sh` — System deps check | 系统依赖检查
-- `scripts/dev.sh` — Dev server launcher | 开发服务器启动
-- `.gitignore` — Standard ignores | 标准忽略规则
+- `public/client.js` — Full WebCodecs AudioEncoder + WebSocket implementation | WebCodecs 编码 + WebSocket 发送
+- `public/index.html` — Stats display, status improvements | 统计显示、状态优化
+- `src/index.ts` — Chunk logging + disconnect summary, removed audio.ts import | 数据块日志，移除 audio.ts 引用
 
 ## Evidence of Completion | 完成证据
 
@@ -79,6 +71,7 @@
 - [x] `pnpm run build` — clean | 通过
 - [x] `./init.sh` — full pipeline passes | 完整管线通过
 - [x] Server starts, certs generated, HTTPS listening | 服务器启动，证书生成，HTTPS 正常监听
+- [x] E2E WebSocket test: 5 binary chunks sent, server logged #1-5 with byte counts, disconnect summary | 端到端 WebSocket 测试通过
 
 ## Notes for Next Session | 下次会话备注
 
