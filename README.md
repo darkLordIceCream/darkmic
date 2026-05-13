@@ -1,83 +1,117 @@
 <p align="right">
-  <a href="README-zh.md">🇨🇳 中文</a>
+  <a href="README-zh.md">
+    <img src="https://img.shields.io/badge/-简体中文-333?style=flat-square" alt="简体中文">
+  </a>
 </p>
 
 <br>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/darkmic-000000?style=for-the-badge" alt="darkmic">
+  <img src="https://img.shields.io/badge/darkmic-000?style=flat-square" alt="">
 </p>
 
-<p align="center">
-  <b>Phone-as-microphone for Windows PC</b><br>
-  <code>Chrome → local network → virtual audio device</code>
-</p>
+<h1 align="center">
+  <code>Phone → PC · Wireless Microphone</code>
+</h1>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
-  <img src="https://img.shields.io/github/last-commit/darkLordIceCream/darkmic?style=flat-square&color=22c55e" alt="Last Commit">
-  <a href="https://github.com/darkLordIceCream/darkmic/releases"><img src="https://img.shields.io/github/v/release/darkLordIceCream/darkmic?style=flat-square" alt="Release"></a>
-  <img src="https://img.shields.io/badge/Chrome-4285F4?style=flat-square&logo=googlechrome&logoColor=white" alt="Chrome">
-  <img src="https://img.shields.io/badge/Windows-0078D4?style=flat-square&logo=windows&logoColor=white" alt="Windows">
-  <img src="https://img.shields.io/badge/pnpm-F69220?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm">
-  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
+  <b>Turn your Android phone or iPad into a Windows PC microphone.</b><br>
+  <i>Chrome browser only. Zero install on phone. No cloud.</i>
 </p>
 
 <br>
 
-Turn your Android phone or iPad into a wireless microphone for your Windows PC — using nothing but Chrome.
+<p align="center">
+  <img src="https://img.shields.io/github/v/release/darkLordIceCream/darkmic?style=flat-square&label=release&color=333" alt="">
+  <img src="https://img.shields.io/github/last-commit/darkLordIceCream/darkmic?style=flat-square&label=updated&color=22c55e" alt="">
+  <img src="https://img.shields.io/github/license/darkLordIceCream/darkmic?style=flat-square&label=license&color=blue" alt="">
+  <br>
+  <img src="https://img.shields.io/badge/-Chrome-4285F4?style=flat-square&logo=googlechrome&logoColor=white" alt="">
+  <img src="https://img.shields.io/badge/-Windows-0078D4?style=flat-square&logo=windows&logoColor=white" alt="">
+  <img src="https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="">
+  <img src="https://img.shields.io/badge/-pnpm-F69220?style=flat-square&logo=pnpm&logoColor=white" alt="">
+</p>
 
-> No app installation on the phone. No cloud services. Just open a web page, tap start, and talk.
+<br>
+<hr>
+<br>
 
----
+## ‎ ‎ ‎ ⚡ How It Works
 
-## How It Works
+<br>
 
 ```
-    📱 PHONE / IPAD (CHROME)                         🖥️ WINDOWS PC (darkmic.exe)
-    ┌──────────────────────────┐        ┌──────────────────────────────────┐
-    │                          │        │                                  │
-    │  Open https://192.168..  │───────▶│  HTTPS + WebSocket server         │
-    │  Tap "Start Microphone"  │  ◀─────│  Serves phone UI + QR code       │
-    │  Speak                    │   WS   │                                  │
-    │                          │        │  ┌────────────────────────────┐  │
-    │  getUserMedia            │        │  │ FFmpeg: opus → PCM         │  │
-    │  → AudioEncoder(opus)    │        │  │ SoX: PCM → VB-Cable        │  │
-    │  → WebSocket send        │        │  │ Any app sees it as mic 🎤  │  │
-    │                          │        │  └────────────────────────────┘  │
-    └──────────────────────────┘        └──────────────────────────────────┘
+                        ┌─────────────────────────────────────────────────┐
+                        │            📱 PHONE / IPAD (Chrome)             │
+                        │                                                 │
+                        │   Open URL from terminal                         │
+                        │   Tap "Start Microphone"                         │
+                        │   Start speaking                                 │
+                        │                                                 │
+                        │   getUserMedia                                   │
+                        │     → MediaStreamTrackProcessor                  │
+                        │     → AudioEncoder (opus · 48kHz · mono)        │
+                        │     → WebSocket send                             │
+                        │                       │                         │
+                        └───────────────────────│─────────────────────────┘
+                                                │  HTTPS + WebSocket
+                                                │  (local network · ~80ms)
+                                                │
+                        ┌───────────────────────│─────────────────────────┐
+                        │                       ▼                         │
+                        │           🖥️  WINDOWS PC (darkmic.exe)          │
+                        │                                                 │
+                        │   WebSocket receive                              │
+                        │     → FFmpeg decode (opus → PCM)                │
+                        │     → SoX output → VB-CABLE Input               │
+                        │     → VB-CABLE Output (system virtual mic)       │
+                        │                                                 │
+                        │   ✅ Any app sees it as a normal microphone      │
+                        └─────────────────────────────────────────────────┘
 ```
 
-**~80ms end-to-end latency.** One-way audio: phone → PC.
+> Audio flows **one-way** (phone → PC). End-to-end latency ~ **80ms**.
 
----
+<br>
+<hr>
+<br>
 
-## Features
+## ‎ ‎ ‎ ✨ Features
+
+<br>
 
 <div align="center">
 
 | | |
 |---|---|
-| 📱 **Zero install** on phone — just Chrome | 🔒 **Local network only** — no cloud, no data leaves your home |
-| ⚡ **~80ms** low latency (WebCodecs AudioEncoder) | 🔊 **Opus codec** at 32kbps — efficient for speech |
-| 🔌 **VB-Cable** output — system-level virtual mic | 📦 **Single .exe** distribution (pkg) |
-| 🖥️ **Windows 10/11** · Android · iPad | 🌐 **QR code** connection *(coming soon)* |
+| 📱 **Zero install** on phone | Just Chrome — no app store needed |
+| 🔒 **Local network only** | No cloud, no data leaves your home |
+| ⚡ **~80ms latency** | WebCodecs AudioEncoder skips container overhead |
+| 🔊 **Opus 32kbps** | Optimized for speech, efficient bandwidth |
+| 🔌 **VB-Cable output** | System-level virtual microphone device |
+| 📦 **Single .exe** | Packaged via pkg, FFmpeg bundled alongside |
+| 🖥️ **Windows 10/11** | Android phone & iPad supported |
+| 🌐 **QR connect** | *(coming soon)* |
 
 </div>
 
----
+<br>
+<hr>
+<br>
 
-## Quick Start
+## ‎ ‎ ‎ 🚀 Quick Start
+
+<br>
 
 ### Prerequisites
 
-| Requirement | Installation |
-|---|---|
-| **Chrome** (PC + phone) | [Download Chrome](https://www.google.com/chrome/) |
-| **VB-Cable** | [Download from VB-Audio](https://vb-audio.com/Cable/) |
-| **FFmpeg** | `winget install ffmpeg` |
-| **SoX** | `winget install sox` |
-| **Same WiFi** | Phone and PC on the same network |
+```bash
+# Install system dependencies (Windows)
+winget install ffmpeg
+winget install sox
+```
+
+Also required: [VB-Cable](https://vb-audio.com/Cable/) (virtual audio driver) and [Chrome](https://www.google.com/chrome/) on both PC and phone. Both devices on the same WiFi.
 
 ### Run
 
@@ -88,64 +122,54 @@ pnpm install
 pnpm run dev
 ```
 
-The terminal will show your LAN IPs:
+The terminal shows your LAN IPs:
 
 ```
-darkmic server running at https://0.0.0.0:3000
   ➜  Phone: open https://192.168.1.100:3000 in Chrome
 ```
 
 ### Connect
 
-1. On your **phone's Chrome**, open the URL shown in the terminal
-2. When you see the privacy warning, tap **Advanced → Proceed**
-3. Tap **"Start Microphone"** and allow microphone access
-4. Start speaking — audio streams to your PC in real time
+<table>
+<tr>
+<td>①</td>
+<td>Open the URL on <b>phone's Chrome</b></td>
+</tr>
+<tr>
+<td>②</td>
+<td>Tap <b>Advanced → Proceed</b> (self-signed cert — <a href="#why-self-signed">expected</a>)</td>
+</tr>
+<tr>
+<td>③</td>
+<td>Tap <b>"Start Microphone"</b> → allow mic permission</td>
+</tr>
+<tr>
+<td>④</td>
+<td>Speak — audio streams to your PC in real time</td>
+</tr>
+</table>
 
-> 💡 **The self-signed certificate warning is expected.** Your connection is encrypted — Chrome just doesn't recognize a cert created on your local machine. This is normal for LAN-only applications.
+<br>
+<hr>
+<br>
 
----
+## ‎ ‎ ‎ 🏗️ Architecture
 
-## Architecture
-
-```
-PHONE SIDE (Chrome)                          PC SIDE (Node.js server)
-┌─────────────────────────────┐             ┌──────────────────────────────────────┐
-│ getUserMedia({audio: true}) │             │ Express HTTPS server                  │
-│         ↓                   │             │  • Serves public/ (phone UI)          │
-│ MediaStreamTrackProcessor   │   HTTPS     │  • WebSocket server (ws)              │
-│         ↓                   │  ◄─────────│  • FFmpeg decoder pipe                  │
-│ AudioEncoder                │      WS     │  • SoX output → VB-Cable               │
-│   codec: opus               │ ──────────►│                                        │
-│   sampleRate: 48000         │             │  ┌─── AUDIO PIPELINE ──────────────┐  │
-│   channels: 1 (mono)        │             │  │ opus chunks → FFmpeg → PCM      │  │
-│   bitrate: 32kbps           │             │  │ → SoX → VB-CABLE Input          │  │
-│         ↓                   │             │  │ → VB-CABLE Output (system mic)  │  │
-│ WebSocket send              │             │  └────────────────────────────────┘  │
-│  (EncodedAudioChunk)        │             │                                        │
-└─────────────────────────────┘             └──────────────────────────────────────┘
-```
+<br>
 
 ### Tech Stack
 
 | Layer | Technology |
-|---|---|
-| Language | TypeScript |
+|:---|---|
+| Server runtime | Node.js + TypeScript |
 | HTTP | Express |
 | WebSocket | ws |
 | Audio encode (browser) | WebCodecs `AudioEncoder` (opus) |
 | Audio decode (server) | FFmpeg |
 | Audio output | SoX → VB-Cable |
-| Packaging | `@yao-pkg/pkg` (single .exe) |
-| Package manager | pnpm |
+| Packaging | `@yao-pkg/pkg` |
 
-### Phase 2 (optional)
-
-If lower latency is needed, the transport can be upgraded to **WebRTC** (`RTCPeerConnection`), keeping the same WebSocket for signaling only.
-
----
-
-## Project Structure
+### Project Layout
 
 ```
 darkmic/
@@ -158,52 +182,104 @@ darkmic/
 │   └── client.js           # WebCodecs + WebSocket client
 ├── scripts/                # Dev utilities
 ├── AGENTS.md               # AI agent instructions
-├── feature_list.json        # Feature tracker
-├── progress.md              # Session log
-└── init.sh                  # Verification script
+├── feature_list.json       # Feature tracker
+├── progress.md             # Session log
+└── init.sh                 # Verification script
 ```
 
-## Development
+### Phase 2 (optional)
+
+If lower latency is needed, upgrade transport to **WebRTC** (`RTCPeerConnection`). WebSocket becomes signaling only.
+
+<br>
+<hr>
+<br>
+
+## ‎ ‎ ‎ 🧪 Development
+
+<br>
 
 ```bash
-./init.sh                   # Full verification (install + typecheck + build)
-pnpm run dev                # Dev server with file watching
-pnpm run typecheck           # TypeScript check only
-pnpm run build               # Compile to dist/
-pnpm run package             # Package to Windows .exe
+# Full verification
+./init.sh
+
+# Dev server with hot reload
+pnpm run dev
+
+# TypeScript check
+pnpm run typecheck
+
+# Build to dist/
+pnpm run build
+
+# Package to Windows .exe
+pnpm run package
 ```
 
-```bash
-# System dependency check
-./scripts/setup.sh
+<br>
+<hr>
+<br>
 
-# Install tools on Windows
-winget install ffmpeg
-winget install sox
-```
+## ‎ ‎ ‎ ✅ Feature Status
 
----
+<br>
 
-## Feature Status
+| ID | Feature | | Status |
+|:---:|---|---|:---:|
+| F-001 | Project scaffold + HTTPS certs | 2026-05-13 | ✅ |
+| F-002 | WebCodecs + WebSocket pipeline | 2026-05-13 | ✅ |
+| F-003 | FFmpeg decode → VB-Cable | — | 📝 |
+| F-004 | QR code + connection UX | — | 📝 |
+| F-005 | Latency tuning + quality controls | — | 📝 |
+| F-006 | WebRTC P2P transport | — | ⏸️ |
+| F-007 | Windows pkg packaging | — | 📝 |
+| F-008 | Installer + system tray | — | 📝 |
 
-| ID | Feature | Status |
-|:---:|---|---|
-| F-001 | Project scaffold + HTTPS certs | ✅ done |
-| F-002 | WebCodecs + WebSocket pipeline | ✅ done |
-| F-003 | FFmpeg decode → VB-Cable | 📝 pending |
-| F-004 | QR code + connection UX | 📝 pending |
-| F-005 | Latency tuning + quality controls | 📝 pending |
-| F-006 | WebRTC P2P transport | ⏸️ deferred |
-| F-007 | Windows pkg packaging | 📝 pending |
-| F-008 | Installer + system tray | 📝 pending |
+<br>
+<hr>
+<br>
 
----
+## ‎ ‎ ‎ ❓ FAQ
+
+<br>
+
+<details>
+<summary><b>Why does the browser show a privacy warning?</b></summary>
+<br>
+The server generates a self‑signed SSL certificate on first run. Chrome warns because it isn't signed by a public CA. Your connection is still encrypted — perfectly safe for local network use. Tap <b>Advanced → Proceed</b> to continue.
+</details>
+
+<br>
+
+<details>
+<summary><b>Can I use Safari or Firefox?</b></summary>
+<br>
+No. This project targets <b>Chrome only</b> on both phone and PC. It uses WebCodecs <code>AudioEncoder</code> which has full support in Chrome.
+</details>
+
+<br>
+
+<details>
+<summary><b>Can I use this over the internet?</b></summary>
+<br>
+No. darkmic is designed for <b>local network only</b> (same WiFi subnet). There is no STUN/TURN, no cloud relay, no NAT traversal.
+</details>
+
+<br>
+<hr>
+<br>
 
 <p align="center">
-  <a href="README-zh.md">🇨🇳 中文版本</a>
+  <a href="README-zh.md">
+    <img src="https://img.shields.io/badge/-简体中文-333?style=flat-square" alt="简体中文">
+  </a>
+  &nbsp;&nbsp;
+  <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT">
 </p>
 
 <p align="center">
-  <sub>Built for anyone who needs a mic but doesn't have one handy.</sub><br>
-  <sub>MIT © 2026 darkLordIceCream</sub>
+  <sub>
+    Built for when you need a mic but don't have one.<br>
+    © 2026 darkLordIceCream
+  </sub>
 </p>
