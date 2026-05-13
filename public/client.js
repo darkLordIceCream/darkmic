@@ -112,7 +112,7 @@ async function start() {
 
 async function readLoop() {
   try {
-    while (true) {
+    while (isRunning) {
       const { value, done } = await reader.read();
       if (done) break;
 
@@ -143,6 +143,9 @@ function stop() {
     stream = null;
   }
   if (ws) {
+    ws.onopen = null;
+    ws.onclose = null;
+    ws.onerror = null;
     try { ws.close(); } catch (_) { /* ignore */ }
     ws = null;
   }
