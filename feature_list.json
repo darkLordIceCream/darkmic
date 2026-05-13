@@ -1,0 +1,52 @@
+{
+  "features": [
+    {
+      "id": "F-001",
+      "name": "Project scaffold + HTTPS certs",
+      "description": "Initialize Node.js/TypeScript project structure, install dependencies (ws, express, fluent-ffmpeg, mkcert), generate dev SSL certs, set up tsconfig and basic dev scripts",
+      "dependencies": [],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "F-002",
+      "name": "WebSocket server + phone client",
+      "description": "HTTPS server serving phone UI page, WebSocket server accepting connections. Phone page: getUserMedia → MediaRecorder (opus, 20ms slices) → ws.send binary chunks. Verify chunks arrive server-side.",
+      "dependencies": ["F-001"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "F-003",
+      "name": "Server audio decode → virtual mic",
+      "description": "Pipe incoming opus chunks through FFmpeg (decode to PCM), write to virtual audio device (BlackHole on macOS, VB-Cable on Windows). End-to-end audio flow working.",
+      "dependencies": ["F-002"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "F-004",
+      "name": "Connection UX + error handling",
+      "description": "QR code on PC page for phone to scan, connection status display, auto-reconnect on WebSocket disconnect, mic permission error handling, start/stop controls on phone UI",
+      "dependencies": ["F-003"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "F-005",
+      "name": "Latency tuning + quality controls",
+      "description": "Tweak MediaRecorder timeslice, FFmpeg buffer params, Opus bitrate. Add basic quality selector (voice/music). Measure and document end-to-end latency.",
+      "dependencies": ["F-004"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "F-006",
+      "name": "WebRTC P2P transport (optional)",
+      "description": "Replace MediaRecorder + WS with RTCPeerConnection for lower latency. Phone sends MediaStreamTrack directly. Server uses werift (TS WebRTC) to receive. Keep WS for signaling only.",
+      "dependencies": ["F-004"],
+      "status": "deferred",
+      "evidence": ""
+    }
+  ]
+}
