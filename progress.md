@@ -2,9 +2,9 @@
 
 ## Current State | 当前状态
 
-**Last Updated | 最后更新:** 2026-05-13
-**Session | 会话:** Phase 1 kickoff — F-001 + F-002 完成
-**Active Feature | 当前功能:** (none — F-002 merged, F-003 pending | F-002 已合并，F-003 待开始)
+**Last Updated | 最后更新:** 2025-07-05
+**Session | 会话:** F-003 implementation — audio pipeline with opusscript + ffplay playback
+**Active Feature | 当前功能:** F-003 (in-progress | 进行中)
 
 ## Status | 状态
 
@@ -29,60 +29,72 @@
   - public/index.html: Start/Stop button, status, stats display
   - src/index.ts: chunk logging with seq + byte count, disconnect summary
   - E2E test: 5 binary chunks → server logged #1-5 with correct byte totals
+- [x] **F-003 (Phase 1-2): Audio pipe + ffplay playback | 音频管线 + ffplay 播放**
+  - `src/audio.ts`: AudioPipe with 3 modes (file / ffplay / wasapi) | 三种输出模式
+  - `src/index.ts`: AudioPipe integrated into WebSocket handler, configurable via `AUDIO_PIPE_MODE` env var | 集成到 WebSocket
+  - `scripts/test-audio.ts`: Manual test script for all modes | 手动测试脚本
+  - `scripts/gen-sine-test.ts`: Sine wave generator for E2E audio pipeline test | 正弦波生成器
+  - Decoding strategy: `opusscript` (pure JS) decode opus → PCM in-process | 使用 opusscript 纯 JS 解码
+  - **File mode verified**: 100 opus frames → 800 bytes on disk | 文件模式已验证
+  - **ffplay mode verified**: 440Hz sine wave encoded → decoded → played through speakers | ffplay 扬声器播放已验证
 
 ### What's In Progress | 进行中
 
-- (none | 无)
+- [ ] **F-003 (Phase 3-4): VB-Cable + production hardening | VB-Cable 输出 + 生产化**
+  - WASAPI mode implemented but not verified (requires Windows + VB-Cable driver) | WASAPI 模式已实现但未验证
+  - Auto-restart, error handling not yet implemented | 自动重启/错误处理未实现
 
 ### What's Next | 下一步
 
-1. **F-003: Server audio decode → virtual mic | 服务端音频解码 → 虚拟麦克风**
-   - FFmpeg pipe receiving raw opus, decode to PCM, output to VB-Cable
-   - Wire into src/index.ts WebSocket handler
-   - E2E audio flow: phone mic → PC speakers via VB-Cable
+1. **F-003 Phase 3**: VB-Cable WASAPI output — test on Windows with VB-Cable installed | 在装有 VB-Cable 的 Windows 上验证
+2. **F-003 Phase 4**: Production hardening — FFmpeg auto-restart, connection state feedback | 生产化加固
+3. **F-004**: Connection UX + QR code + error handling | 连接体验
 
 ## Blockers / Risks | 阻塞项 / 风险
 
-- (none | 无)
+- **FFmpeg Gyan build lacks audio output devices**: `-devices` shows only input devices (dshow, openal). Cannot use FFmpeg for direct audio playback. Mitigation: use ffplay for output. | FFmpeg Gyan 构建版没有音频输出设备，用 ffplay 替代
+- **No raw opus demuxer in FFmpeg**: `-f opus` not available. Mitigation: decode opus in Node.js via opusscript, pipe PCM to ffplay/FFmpeg. | FFmpeg 无 raw opus 解析器，改用 Node.js 解码
+- **opusscript decoder fidelity**: Pure JS decode may have edge cases with non-standard frame sizes. Test with real phone audio needed. | 纯 JS 解码器在非标准帧大小时可能有边缘情况
+- **VB-Cable not installed on dev machine**: Phase 3 (wasapi mode) cannot be verified locally. | 开发机未安装 VB-Cable
 
 ## Decisions Made | 已做决策
 
-- **Transport: WebCodecs AudioEncoder + WebSocket**: Lower latency than MediaRecorder (~80ms vs ~150ms) by skipping WebM container and internal buffering. Uses `AudioEncoder` + `MediaStreamTrackProcessor`. WebRTC deferred to F-006 if latency still insufficient.
-  > 传输方案采用 WebCodecs AudioEncoder + WebSocket，延迟 ~80ms，跳过 MediaRecorder 容器包装，WebRTC 推迟到 F-006
-- **Node.js retained as server runtime**: After evaluating Rust/Go alternatives, Node.js is the right choice for this I/O-bound audio pipeline. Rust rewrite would increase dev time 3-5x for marginal latency gains. Node.js + pkg packaging is sufficient for distribution.
-  > 保持 Node.js，Rust 重写收益有限，对 I/O 密集的音频传输场景不划算
-- **Windows-first (VB-Cable)**: Target platform is Windows + VB-Cable virtual audio device. macOS not supported.
-  > 目标平台 Windows + VB-Cable 虚拟声卡，不支持 macOS
-- **Packaging via pkg**: Server compiled into standalone .exe with @yao-pkg/pkg. FFmpeg bundled alongside. No Node.js needed on target machine.
-  > 通过 pkg 打包为独立 exe，FFmpeg 附带，目标机不需要 Node.js
-- **Chrome-only**: No cross-browser testing scope | 仅 Chrome，不做跨浏览器
-- **No TURN/STUN**: Local network only | 仅局域网，不需要 NAT 穿透
-- **Self-signed certs via openssl**: No npm dependency for cert generation | 用 openssl 自签证书，不引入 npm 依赖
-- **pnpm**: Use pnpm instead of npm for package management | 使用 pnpm 替代 npm
+- **Transport: WebCodecs AudioEncoder + WebSocket**: Lower latency than MediaRecorder (~80ms vs ~150ms). WebRTC deferred to F-006.
+  > Phase 1 采用 WebCodecs AudioEncoder + WebSocket
+- **Decoding strategy: opusscript (pure JS) → PCM → ffplay**: Instead of FFmpeg raw opus demuxer (not available in Gyan build) or @discordjs/opus (needs native compilation). Pure JS avoids Python/C++ build toolchain dependency.
+  > 解码方案：opusscript 纯 JS 解码，避免原生编译依赖
+- **Node.js retained vs Rust**: Node.js is sufficient for I/O-bound audio pipeline.
+- **Windows-first (VB-Cable)**: macOS not supported.
+- **packaging via pkg**: Standalone .exe via @yao-pkg/pkg.
+- **Chrome-only**: No cross-browser testing.
+- **No TURN/STUN**: Local network only.
+- **pnpm**: Package manager.
 
 ## Files Modified This Session | 本次修改的文件
 
-- `public/client.js` — Full WebCodecs AudioEncoder + WebSocket implementation | WebCodecs 编码 + WebSocket 发送
-- `public/index.html` — Stats display, status improvements | 统计显示、状态优化
-- `src/index.ts` — Chunk logging + LAN IP display, disconnect summary | 数据块日志、LAN IP 显示、断开汇总
-- `AGENTS.md` — Architecture doc (WebCodecs, PC-side clarification, packaging plan) | 架构文档更新
-- `feature_list.json` — 8 features with Chinese descriptions | 8 个功能及中文描述
-- `progress.md` — Session tracking | 会话追踪
+- `src/audio.ts` — Rewrote from stub to full AudioPipe with 3 output modes, opusscript decode | 从桩重写为完整音频管线
+- `src/index.ts` — Integrated AudioPipe into WebSocket handler, added AUDIO_PIPE_MODE env | 集成音频管线
+- `scripts/test-audio.ts` — New: manual test script for all modes | 新增测试脚本
+- `scripts/gen-sine-test.ts` — New: sine wave generator for E2E audio test | 新增正弦波测试
+- `scripts/gen-sine-file.ts` — New: PCM file generator | 新增 PCM 文件生成
+- `package.json` — Added test:audio script, removed @discordjs/opus, added opusscript | 更新依赖和脚本
+- `pnpm-workspace.yaml` — New: required by pnpm 10 for build script approval | 新增工作区配置
+- `pnpm-lock.yaml` — Updated dependencies | 更新锁文件
+- `progress.md` — Session tracking update | 更新
 
 ## Evidence of Completion | 完成证据
 
-- [x] `pnpm run typecheck` — clean | 通过
-- [x] `pnpm run build` — clean | 通过
-- [x] `./init.sh` — full pipeline passes | 完整管线通过
-- [x] Server starts, certs generated, HTTPS listening | 服务器启动，证书生成，HTTPS 正常监听
-- [x] E2E WebSocket test: 5 binary chunks sent, server logged #1-5 with byte counts, disconnect summary | 端到端 WebSocket 测试通过
+- [x] `pnpm run typecheck` — clean | 类型检查通过
+- [x] File mode test: 100 synthetic opus frames → 800 bytes output | 文件模式验证通过
+- [x] ffplay mode test: 440Hz sine wave → opus encode → opusscript decode → ffplay speaker playback (6552 bytes processed) | 扬声器播放验证通过
+- [ ] E2E phone → PC audio: requires real phone + Windows with VB-Cable | 手机端到端验证待完成
+- [ ] WASAPI VB-Cable output: requires VB-Cable driver | VB-Cable 验证待完成
 
 ## Notes for Next Session | 下次会话备注
 
-- **F-003 is next**: Server audio decode → VB-Cable
-  - Prerequisites on Windows: `winget install ffmpeg sox`
-  - Rewrite `src/audio.ts` to spawn FFmpeg, pipe opus chunks → PCM → VB-Cable
-  - Re-integrate audio pipe into `src/index.ts` WebSocket handler
-  - E2E verification: phone mic → PC hears audio
-- **Branch to use**: `main` (F-002 merged)
-- **Architecture decision to verify**: raw opus `-f opus` pipe compatibility with FFmpeg
+- **F-003 Phase 3**: Start server with `AUDIO_PIPE_MODE=wasapi`, connect phone on Windows with VB-Cable
+  - FFmpeg path on Windows: `C:\Users\<user>\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1.1-full_build\bin\ffmpeg.exe`
+  - Or add FFmpeg to PATH for simpler usage: `set PATH=%PATH%;C:\...\bin\`
+- **F-003 Phase 4**: Add FFmpeg process restart on crash, connection state feedback to phone UI
+- **Branch to use**: `feat/f-003-audio-decode` (NOT merged to main yet)
+- **Architecture decision**: opusscript decode + PCM pipe to ffplay works. WASAPI mode uses same PCM pipe approach to FFmpeg.
