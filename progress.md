@@ -34,6 +34,8 @@
    - Phone: getUserMedia → MediaRecorder (opus 20ms) → ws.send
    - Server: receive chunks, log stats | 服务端接收数据块，记录统计
    - Verify binary chunks flow end-to-end | 验证二进制数据端到端流通
+2. **F-007: Windows packaging** (after core audio pipeline works)
+   - Compile to .exe via pkg, bundle FFmpeg, create launcher
 
 ## Blockers / Risks | 阻塞项 / 风险
 
@@ -45,6 +47,8 @@
   > 传输方案先选 MediaRecorder + WebSocket，复杂度低，WebRTC 推迟到 F-006
 - **Windows-first (VB-Cable)**: Target platform is Windows + VB-Cable virtual audio device. macOS not supported.
   > 目标平台 Windows + VB-Cable 虚拟声卡，不支持 macOS
+- **Packaging via pkg**: Server compiled into standalone .exe with @yao-pkg/pkg. FFmpeg bundled alongside. No Node.js needed on target machine.
+  > 通过 pkg 打包为独立 exe，FFmpeg 附带，目标机不需要 Node.js
 - **Chrome-only**: No cross-browser testing scope | 仅 Chrome，不做跨浏览器
 - **No TURN/STUN**: Local network only | 仅局域网，不需要 NAT 穿透
 - **Self-signed certs via openssl**: No npm dependency for cert generation | 用 openssl 自签证书，不引入 npm 依赖

@@ -27,12 +27,27 @@ Phone (Chrome)                    PC (Node.js)
 
 Same server infrastructure, swap transport: `RTCPeerConnection` instead of `MediaRecorder` chunks. Signaling stays on the same WebSocket.
 
+## Packaging | 打包
+
+The server is compiled into a single Windows `.exe` via `pkg` (bundles Node.js runtime + code). FFmpeg is distributed alongside as a separate binary. The user double-clicks `darkmic.exe` or runs a launcher script.
+
+> 服务端通过 `pkg` 打包为单个 Windows exe（内置 Node.js 运行时）。FFmpeg 作为独立二进制文件一同分发。用户双击 exe 即可启动服务。
+
+```
+darkmic/
+├── darkmic.exe         # pkg-compiled server (self-contained)
+├── ffmpeg.exe          # system dep bundled alongside
+├── certs/              # generated on first run (self-signed)
+└── config.json         # port, quality, etc. (optional)
+```
+
 ## Constraints | 约束
 
 - **Chrome-only** (Android phone, iPad, Windows PC). No other browser testing needed. | 仅支持 Chrome（安卓手机 / iPad / Windows），不做跨浏览器兼容
 - **Local network only** — same subnet, no STUN/TURN. | 仅局域网，不处理 NAT 穿透
 - **HTTPS required** — use `mkcert` for local dev certs. | 必须 HTTPS，本地用 `mkcert` 生成证书
 - **Windows + VB-Cable**. macOS not supported. | Windows 平台 + VB-Cable 虚拟声卡，不支持 macOS
+- **FFmpeg required** — bundled with the packaged app; on dev machine install via `winget install ffmpeg` or `choco install ffmpeg` | FFmpeg 为必需依赖，打包时内置；开发环境需单独安装
 
 ## Startup Workflow | 启动流程
 
@@ -92,10 +107,12 @@ A feature is done only when ALL of the following are true:
 pnpm run dev           # Start dev server with file watching | 启动开发服务器（热重载）
 pnpm run typecheck     # TypeScript type check only | 仅做类型检查
 pnpm run build         # Compile TypeScript to dist/ | 编译 TypeScript 到 dist/
-pnpm run start         # Start production server | 启动生产服务器
+pnpm run start         # Start production server (node dist/index.js) | 启动生产服务器
+pnpm run package       # Package into Windows .exe via pkg | 打包为 Windows exe
 ```
 
 > 注意：使用 `pnpm` 而非 npm。如未安装：`brew install pnpm`。
+> Windows 打包依赖：`pnpm add -g @yao-pkg/pkg`（或 `npm install -g @yao-pkg/pkg`）。
 
 ## Escalation | 升级处理
 

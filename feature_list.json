@@ -59,6 +59,26 @@
       "dependencies": ["F-004"],
       "status": "deferred",
       "evidence": ""
+    },
+    {
+      "id": "F-007",
+      "name": "Windows pkg packaging",
+      "nameZh": "Windows pkg 打包",
+      "description": "Compile server into standalone .exe via @yao-pkg/pkg. Bundle ffmpeg.exe alongside. First-run generates self-signed certs. Output a single distributable folder.",
+      "descriptionZh": "通过 @yao-pkg/pkg 将服务端编译为独立 exe，附带 ffmpeg.exe，首次运行自动生成证书，输出可分发的文件夹",
+      "dependencies": ["F-004"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "F-008",
+      "name": "Launcher UX + installer",
+      "nameZh": "启动体验 + 安装程序",
+      "description": "Add .bat launcher or NSIS/InnoSetup installer for Windows. Show console window with server status and QR code URL. Optionally add system tray icon for quick controls.",
+      "descriptionZh": "添加 bat 启动器或 NSIS/InnoSetup 安装程序。控制台窗口显示服务器状态和二维码 URL。可选添加系统托盘图标",
+      "dependencies": ["F-007"],
+      "status": "not-started",
+      "evidence": ""
     }
   ]
 }
