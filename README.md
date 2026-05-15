@@ -109,6 +109,7 @@
 # Install system dependencies (Windows)
 winget install ffmpeg
 winget install sox
+winget install OpenSSL.Light
 ```
 
 Also required: [VB-Cable](https://vb-audio.com/Cable/) (virtual audio driver) and [Chrome](https://www.google.com/chrome/) on both PC and phone. Both devices on the same WiFi.

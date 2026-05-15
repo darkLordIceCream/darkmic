@@ -3,33 +3,60 @@ import { createServer } from 'node:https';
 import { networkInterfaces } from 'node:os';
 import { WebSocketServer } from 'ws';
 import { loadOrCreateCertificates } from './cert.js';
+import { createAudioPipe, type AudioPipeMode, type AudioPipeState } from './audio.js';
 
 const certs = loadOrCreateCertificates();
 const app = express();
 const server = createServer({ key: certs.key, cert: certs.cert }, app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, maxPayload: 100 * 1024 });
 
 app.use(express.static('public'));
 
 const port = parseInt(process.env.PORT || '3000', 10);
 
+// Audio pipe configuration
+//   AUDIO_PIPE_MODE=file     — Write raw opus to disk (default, safe)
+//   AUDIO_PIPE_MODE=ffplay   — Decode + play through speakers
+//   AUDIO_PIPE_MODE=wasapi   — Decode + VB-Cable (Windows only)
+const audioMode = (process.env.AUDIO_PIPE_MODE || 'file') as AudioPipeMode;
+
+console.log(`Audio pipe mode: ${audioMode}`);
+if (audioMode !== 'file') {
+  console.log(`  (set AUDIO_PIPE_MODE=file for safe logging only)`);
+}
+
 wss.on('connection', (ws) => {
   let chunkCount = 0;
   let totalBytes = 0;
+  function sendState(state: AudioPipeState | 'connected') {
+    if (ws.readyState === ws.OPEN) {
+      ws.send(JSON.stringify({ type: 'state', state }));
+    }
+  }
 
-  console.log('Phone connected');
+  const audioPipe = createAudioPipe({
+    mode: audioMode,
+    onStateChange: (state) => {
+      sendState(state);
+    },
+  });
+
+  console.log(`Phone connected — audio pipe: ${audioPipe.mode}`);
+  sendState('connected');
 
   ws.on('message', (data) => {
     if (Buffer.isBuffer(data)) {
       chunkCount++;
       totalBytes += data.length;
+      audioPipe.write(data);
       console.log(
-        `Received chunk #${chunkCount}: ${data.length} bytes (total: ${totalBytes} bytes)`,
+        `Chunk #${chunkCount}: ${data.length} bytes (total ${totalBytes})`,
       );
     }
   });
 
   ws.on('close', () => {
+    audioPipe.close();
     console.log(
       `Phone disconnected — ${chunkCount} chunks, ${totalBytes} bytes total`,
     );
@@ -37,6 +64,7 @@ wss.on('connection', (ws) => {
 
   ws.on('error', (err) => {
     console.error('WebSocket error:', err.message);
+    sendState('error');
   });
 });
 

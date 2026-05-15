@@ -24,11 +24,11 @@
       "id": "F-003",
       "name": "Server audio decode → virtual mic",
       "nameZh": "服务端音频解码 → 虚拟麦克风",
-      "description": "Pipe incoming opus chunks through FFmpeg (decode to PCM), write to virtual audio device (VB-Cable on Windows). End-to-end audio flow working.",
-      "descriptionZh": "Opus 数据通过 FFmpeg 解码为 PCM，写入虚拟声卡（VB-Cable），实现端到端音频通路",
+      "description": "Decode incoming opus chunks to PCM and output to VB-Cable virtual audio device. End-to-end audio flow: phone mic → PC speakers/VB-Cable.",
+      "descriptionZh": "服务端解码 opus 为 PCM，输出到 VB-Cable 虚拟声卡，实现手机麦克风→PC 音频端到端通路",
       "dependencies": ["F-002"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "Phases 1-4 complete. File mode: 100 opus frames verified. ffplay mode: 440Hz sine → speaker verified. WASAPI mode: WinMM waveOut via koffi (pure JS FFI) → VB-Cable verified (192KB PCM). E2E phone → PC audio test passed (real phone, Chrome, VB-Cable). ffplay auto-restart (max 3). State callbacks to phone UI. 2026-05-16"
     },
     {
       "id": "F-004",

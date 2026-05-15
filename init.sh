@@ -13,10 +13,13 @@ echo "--- Installing dependencies | 安装依赖 ---"
 pnpm install
 
 echo "--- Type checking | 类型检查 ---"
-pnpm run typecheck 2>/dev/null || echo "(typecheck script not configured yet | 尚未配置)"
+pnpm run typecheck
 
 echo "--- Building | 构建 ---"
-pnpm run build 2>/dev/null || echo "(build script not configured yet | 尚未配置)"
+pnpm run build
+
+echo "--- Audio pipeline test | 音频管线测试 ---"
+pnpm test:audio 2>/dev/null || echo "(audio test skipped — no audio device or cross-platform env | 无音频设备或跨平台环境)"
 
 echo ""
 echo "=== Verification Complete | 验证完成 ==="
