@@ -28,7 +28,7 @@
       "descriptionZh": "服务端解码 opus 为 PCM，输出到 VB-Cable 虚拟声卡，实现手机麦克风→PC 音频端到端通路",
       "dependencies": ["F-002"],
       "status": "done",
-      "evidence": "Phases 1-4 complete. File mode: 100 opus frames verified. ffplay mode: 440Hz sine → speaker verified. WASAPI mode: WinMM waveOut via koffi (pure JS FFI) → VB-Cable verified (192KB PCM). ffplay auto-restart (max 3). State callbacks to phone UI. 2026-05-16"
+      "evidence": "Phases 1-4 complete. File mode: 100 opus frames verified. ffplay mode: 440Hz sine → speaker verified. WASAPI mode: WinMM waveOut via koffi (pure JS FFI) → VB-Cable verified (192KB PCM). E2E phone → PC audio test passed (real phone, Chrome, VB-Cable). ffplay auto-restart (max 3). State callbacks to phone UI. 2026-05-16"
     },
     {
       "id": "F-004",
