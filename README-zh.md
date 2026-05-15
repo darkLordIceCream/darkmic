@@ -1,6 +1,5 @@
 <p align="center">
-  <a href="README.md"><img src="https://img.shields.io/badge/English-555?style=flat-square&logo=googletranslate&logoColor=white" alt="English"></a>
-  <img src="https://img.shields.io/badge/简体中文-1a1a1a?style=flat-square" alt="简体中文">
+  <samp><a href="README.md">English</a> &nbsp;|&nbsp; 简体中文</samp>
 </p>
 
 <br>
@@ -23,9 +22,9 @@
 <br>
 
 <p align="center">
-  <a href="https://github.com/darkLordIceCream/darkmic/releases"><img src="https://img.shields.io/github/v/release/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=555" alt="版本"></a>
-  <a href="https://github.com/darkLordIceCream/darkmic/commits/main"><img src="https://img.shields.io/github/last-commit/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=22c55e" alt="更新"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=3b82f6" alt="许可"></a>
+  <img src="https://img.shields.io/badge/版本-v0.1.0-555?style=flat-square&labelColor=1a1a1a" alt="版本">
+  <img src="https://img.shields.io/badge/更新-2026--05-22c55e?style=flat-square&labelColor=1a1a1a" alt="更新">
+  <img src="https://img.shields.io/badge/许可-MIT-3b82f6?style=flat-square&labelColor=1a1a1a" alt="许可">
   <br>
   <img src="https://img.shields.io/badge/Chrome-333?style=flat-square&logo=googlechrome&logoColor=white" alt="Chrome">
   <img src="https://img.shields.io/badge/Windows-333?style=flat-square&logo=windows&logoColor=white" alt="Windows">
@@ -244,10 +243,7 @@ pnpm test:audio -- wasapi   # 音频管线测试 → VB-Cable 输出
 <br>
 
 <p align="center">
-  <a href="README.md"><img src="https://img.shields.io/badge/English-555?style=flat-square&logo=googletranslate&logoColor=white" alt="English"></a>
-  <img src="https://img.shields.io/badge/简体中文-1a1a1a?style=flat-square" alt="简体中文">
-  &nbsp;&nbsp;
-  <img src="https://img.shields.io/badge/license-MIT-3b82f6?style=flat-square" alt="MIT">
+  <samp><a href="README.md">English</a> &nbsp;|&nbsp; 简体中文</samp>
 </p>
 
 <p align="center">

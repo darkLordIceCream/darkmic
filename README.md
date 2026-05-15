@@ -1,6 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/English-1a1a1a?style=flat-square" alt="English">
-  <a href="README-zh.md"><img src="https://img.shields.io/badge/简体中文-555?style=flat-square&logo=googletranslate&logoColor=white" alt="简体中文"></a>
+  <samp>English &nbsp;|&nbsp; <a href="README-zh.md">简体中文</a></samp>
 </p>
 
 <br>
@@ -23,9 +22,9 @@
 <br>
 
 <p align="center">
-  <a href="https://github.com/darkLordIceCream/darkmic/releases"><img src="https://img.shields.io/github/v/release/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=555" alt="release"></a>
-  <a href="https://github.com/darkLordIceCream/darkmic/commits/main"><img src="https://img.shields.io/github/last-commit/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=22c55e" alt="updated"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=3b82f6" alt="license"></a>
+  <img src="https://img.shields.io/badge/release-v0.1.0-555?style=flat-square&labelColor=1a1a1a" alt="release">
+  <img src="https://img.shields.io/badge/updated-2026--05-22c55e?style=flat-square&labelColor=1a1a1a" alt="updated">
+  <img src="https://img.shields.io/badge/license-MIT-3b82f6?style=flat-square&labelColor=1a1a1a" alt="license">
   <br>
   <img src="https://img.shields.io/badge/Chrome-333?style=flat-square&logo=googlechrome&logoColor=white" alt="Chrome">
   <img src="https://img.shields.io/badge/Windows-333?style=flat-square&logo=windows&logoColor=white" alt="Windows">
@@ -244,10 +243,7 @@ No. darkmic is designed for <b>local network only</b> (same WiFi subnet). There 
 <br>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/English-1a1a1a?style=flat-square" alt="English">
-  <a href="README-zh.md"><img src="https://img.shields.io/badge/简体中文-555?style=flat-square&logo=googletranslate&logoColor=white" alt="简体中文"></a>
-  &nbsp;&nbsp;
-  <img src="https://img.shields.io/badge/license-MIT-3b82f6?style=flat-square" alt="MIT">
+  <samp>English &nbsp;|&nbsp; <a href="README-zh.md">简体中文</a></samp>
 </p>
 
 <p align="center">
