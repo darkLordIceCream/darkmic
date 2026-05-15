@@ -8,7 +8,7 @@ import { createAudioPipe, type AudioPipeMode, type AudioPipeState } from './audi
 const certs = loadOrCreateCertificates();
 const app = express();
 const server = createServer({ key: certs.key, cert: certs.cert }, app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, maxPayload: 100 * 1024 });
 
 app.use(express.static('public'));
 

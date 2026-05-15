@@ -123,6 +123,7 @@ function createFfplayPipe(ffmpegPath: string, onStateChange?: (s: AudioPipeState
   let byteCount = 0;
   let proc: ChildProcess | null = null;
   let closed = false;
+  let restarting = false;
   let restartCount = 0;
   const MAX_RESTARTS = 3;
   const decoder = createOpusDecoder();
@@ -153,11 +154,13 @@ function createFfplayPipe(ffmpegPath: string, onStateChange?: (s: AudioPipeState
         if (closed) return;
         if (code !== 0 && restartCount < MAX_RESTARTS) {
           restartCount++;
+          restarting = true;
           console.warn(
             `[AudioPipe:ffplay] exited code=${code}, restarting (${restartCount}/${MAX_RESTARTS})...`,
           );
           onStateChange?.('restarting');
           proc = spawnFfplay();
+          restarting = false;
         } else if (code !== 0) {
           console.error(
             `[AudioPipe:ffplay] exited code=${code}, max restarts reached`,
@@ -187,13 +190,17 @@ function createFfplayPipe(ffmpegPath: string, onStateChange?: (s: AudioPipeState
   return {
     mode: 'ffplay',
     write(chunk: Buffer) {
-      if (closed) return;
+      if (closed || restarting) return;
       const pcm = decodeOpusToPcm(decoder, chunk);
       if (!pcm) return;
       const target = proc;
       if (target?.stdin?.writable) {
-        try { target.stdin.write(pcm); } catch { /* process died between check and write */ }
-        byteCount += chunk.length;
+        try {
+          target.stdin.write(pcm);
+          byteCount += chunk.length;
+        } catch {
+          // process stdin closed between check and write
+        }
       }
     },
     close() {
@@ -201,10 +208,10 @@ function createFfplayPipe(ffmpegPath: string, onStateChange?: (s: AudioPipeState
       if (proc?.stdin?.writable) {
         proc.stdin.end();
       }
-      if (decoder) {
-        try { decoder.delete(); } catch { /* ignore */ }
-      }
       setTimeout(() => {
+        if (decoder) {
+          try { decoder.delete(); } catch { /* ignore */ }
+        }
         proc?.kill('SIGTERM');
       }, 300);
       onStateChange?.('stopped');
@@ -242,10 +249,10 @@ function createWasapiPipe(cableDevice: string, onStateChange?: (s: AudioPipeStat
     },
     close() {
       closed = true;
+      wasapi?.close();
       if (decoder) {
         try { decoder.delete(); } catch { /* ignore */ }
       }
-      wasapi?.close();
       onStateChange?.('stopped');
       console.log(
         `[AudioPipe:wasapi] Closed — ${byteCount} bytes processed`,
