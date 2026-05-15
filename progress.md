@@ -62,6 +62,19 @@
 - **opusscript decoder fidelity**: Pure JS decode may have edge cases with non-standard frame sizes. Real phone E2E passed — no issues observed with standard opus frames. | 纯 JS 解码器可能有边缘情况，但真机测试未发现问题
 - **No raw opus demuxer in FFmpeg**: `-f opus` not available. Mitigation: decode opus in Node.js via opusscript, pipe PCM to ffplay/FFmpeg. | FFmpeg 无 raw opus 解析器，改用 Node.js 解码
 
+### Accepted Risks (PR review, 2026-05-16) | 已接受的已知风险
+
+以下问题经过评估后认为不修复或推迟修复，记录在此供后续参考：
+
+- **ACC_MAX discards oldest data** (`wasapi.ts:214`): 缓冲区池饥饿时丢弃最旧 600ms 音频而非拒绝新数据，可能造成 pop/click。触发条件苛刻（6 缓冲区全忙），正常使用中几乎不会触发。
+- **byteCount logged before waveOutWrite success** (`wasapi.ts:197`): `waveOutWrite` 失败时 close 日志会高估播放字节数。`waveOutWrite` 在正常设备上不会失败，仅影响日志准确性。
+- **`as AudioPipeMode` bypasses type-check** (`index.ts:21`): 无效的 `AUDIO_PIPE_MODE` 值不会在编译期报错，运行时 fallback 到 file 模式。不会崩溃，但用户体验差。
+- **Naming: `createWasapiOutput` actually uses WinMM** (`wasapi.ts`): 函数名误导，实际使用 WinMM waveOut API（非 WASAPI COM）。纯命名问题，不影响功能。
+- **Silent opus decode failures** (`audio.ts:88`): 解码失败空 `catch {}` 不记录日志，排查客户端坏数据时缺少线索。
+- **Silent waveOutPrepareHeader/Write failures** (`wasapi.ts:194-195`): 音频输出失败不打印警告，排查无线索。
+- **No unit tests**: 缺乏自动化测试覆盖（ffplay 重启、状态回调、缓冲池饥饿、并发连接），重构有回归风险。
+- **file mode lacks `closed` guard + `onStateChange`**: file 模式与其他两种模式不一致，close 后 write 不会报错但数据丢失。
+
 ## Decisions Made | 已做决策
 
 - **Transport: WebCodecs AudioEncoder + WebSocket**: Lower latency than MediaRecorder (~80ms vs ~150ms). WebRTC deferred to F-006.

@@ -62,16 +62,16 @@ src/                  → PC server (Node.js + TypeScript, ES modules, NodeNext 
   audio.ts              AudioPipe factory with 3 modes (controlled by AUDIO_PIPE_MODE env var):
                           file   — writes framed raw opus to disk (default, safe)
                           ffplay — opusscript decode → PCM → ffplay stdin (speaker playback)
-                          wasapi — opusscript decode → PCM → FFmpeg stdin → VB-Cable (Windows only)
+                          wasapi — opusscript decode → PCM → WinMM waveOut → VB-Cable (Windows only, no FFmpeg)
 
 scripts/              → Dev utilities
   test-audio.ts         Audio pipeline test harness (3 modes)
   gen-sine-test.ts      Sine wave generator for E2E audio test
 ```
 
-**Decoding strategy | 解码方案**: `opusscript` (pure JS, no native deps) decodes opus → s16le PCM in-process. FFmpeg/ffplay handles only PCM → audio device output. This avoids FFmpeg's missing raw opus demuxer in Gyan builds and avoids C++ build toolchain dependencies.
+**Decoding strategy | 解码方案**: `opusscript` (pure JS, no native deps) decodes opus → s16le PCM in-process. Output varies by mode: ffplay mode pipes PCM to ffplay stdin (speakers); wasapi mode writes PCM via WinMM waveOut API (`koffi` FFI) directly to VB-Cable (no FFmpeg needed). This avoids FFmpeg's missing raw opus demuxer and WASAPI muxer in Gyan/BtbN Windows builds.
 
-**Data flow | 数据流**: Browser `AudioEncoder` produces variable-length raw opus packets (no container) → WebSocket binary frames → `AudioPipe.write()` → opusscript decode to PCM → pipe to ffplay/FFmpeg stdin.
+**Data flow | 数据流**: Browser `AudioEncoder` produces variable-length raw opus packets (no container) → WebSocket binary frames → `AudioPipe.write()` → opusscript decode to PCM → output via ffplay stdin (speakers) or WinMM waveOut (VB-Cable).
 
 ## Packaging | 打包
 
@@ -164,7 +164,7 @@ pnpm test:audio -- wasapi   # Audio test with VB-Cable output (Windows only) | V
 ## Key Implementation Notes | 关键实现备注
 
 - The opusscript decoder (48kHz, mono) is instantiated once per WebSocket connection. Malformed opus packets are silently dropped.
-- `AudioPipe.close()` sends SIGTERM to ffplay/FFmpeg after a short delay to let stdin drain.
+- `AudioPipe.close()`: ffplay mode sends SIGTERM after 300ms delay (stdin drain); wasapi mode calls `waveOutReset` + `waveOutClose` after 500ms delay; file mode calls `stream.end()` immediately. All modes call `decoder.delete()` after output cleanup.
 - Certificates auto-generated to `certs/` (gitignored) via openssl on first run. Requires openssl on PATH.
 - The server binds `0.0.0.0` so phones on the same LAN can reach it. Port defaults to 3000 (`PORT` env var).
 
