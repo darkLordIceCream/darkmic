@@ -62,8 +62,8 @@
                         │           🖥️  WINDOWS PC (darkmic.exe)          │
                         │                                                 │
                         │   WebSocket receive                              │
-                        │     → FFmpeg decode (opus → PCM)                │
-                        │     → SoX output → VB-CABLE Input               │
+                        │     → opusscript decode (opus → PCM)                │
+                        │     → WinMM waveOut → VB-CABLE Input               │
                         │     → VB-CABLE Output (system virtual mic)       │
                         │                                                 │
                         │   ✅ Any app sees it as a normal microphone      │
@@ -108,7 +108,6 @@
 ```bash
 # Install system dependencies (Windows)
 winget install ffmpeg
-winget install sox
 winget install OpenSSL.Light
 ```
 
@@ -166,8 +165,8 @@ The terminal shows your LAN IPs:
 | HTTP | Express |
 | WebSocket | ws |
 | Audio encode (browser) | WebCodecs `AudioEncoder` (opus) |
-| Audio decode (server) | FFmpeg |
-| Audio output | SoX → VB-Cable |
+| Audio decode (server) | opusscript (pure JS) |
+| Audio output | WinMM waveOut (koffi FFI) |
 | Packaging | `@yao-pkg/pkg` |
 
 ### Project Layout
@@ -177,7 +176,8 @@ darkmic/
 ├── src/                    # PC server (TypeScript)
 │   ├── index.ts            # HTTPS + WebSocket + Express
 │   ├── cert.ts             # Self-signed SSL cert generation
-│   └── audio.ts            # FFmpeg pipe → VB-Cable
+│   ├── audio.ts            # AudioPipe factory (3 modes)
+│   └── wasapi.ts           # WinMM waveOut → VB-Cable
 ├── public/                 # Phone-facing web app
 │   ├── index.html          # Phone UI
 │   └── client.js           # WebCodecs + WebSocket client
@@ -188,7 +188,7 @@ darkmic/
 └── init.sh                 # Verification script
 ```
 
-### Phase 2 (optional)
+### Future (optional)
 
 If lower latency is needed, upgrade transport to **WebRTC** (`RTCPeerConnection`). WebSocket becomes signaling only.
 
@@ -229,7 +229,7 @@ pnpm run package
 |:---:|---|---|:---:|
 | F-001 | Project scaffold + HTTPS certs | 2026-05-13 | ✅ |
 | F-002 | WebCodecs + WebSocket pipeline | 2026-05-13 | ✅ |
-| F-003 | FFmpeg decode → VB-Cable | — | 📝 |
+| F-003 | opusscript decode → WinMM → VB-Cable | 2026-05-16 | ✅ |
 | F-004 | QR code + connection UX | — | 📝 |
 | F-005 | Latency tuning + quality controls | — | 📝 |
 | F-006 | WebRTC P2P transport | — | ⏸️ |

@@ -62,8 +62,8 @@
                         │          🖥️  Windows PC (darkmic.exe)           │
                         │                                                 │
                         │   WebSocket 接收                                 │
-                        │     → FFmpeg 解码 (opus → PCM)                  │
-                        │     → SoX 输出 → VB-CABLE Input                 │
+                        │     → opusscript 解码 (opus → PCM)                  │
+                        │     → WinMM waveOut → VB-CABLE Input                 │
                         │     → VB-CABLE Output (系统虚拟麦克风)            │
                         │                                                 │
                         │   ✅ 任何应用都可以把它当作普通麦克风              │
@@ -108,7 +108,6 @@
 ```bash
 # 安装系统依赖 (Windows)
 winget install ffmpeg
-winget install sox
 winget install OpenSSL.Light
 ```
 
@@ -166,8 +165,8 @@ pnpm run dev
 | HTTP | Express |
 | WebSocket | ws |
 | 音频编码（浏览器） | WebCodecs `AudioEncoder` (opus) |
-| 音频解码（服务端） | FFmpeg |
-| 音频输出 | SoX → VB-Cable |
+| 音频解码（服务端） | opusscript (纯 JS) |
+| 音频输出 | WinMM waveOut (koffi FFI) |
 | 打包 | `@yao-pkg/pkg` |
 
 ### 项目结构
@@ -177,7 +176,8 @@ darkmic/
 ├── src/                    # PC 服务器 (TypeScript)
 │   ├── index.ts            # HTTPS + WebSocket + Express
 │   ├── cert.ts             # 自签名 SSL 证书生成
-│   └── audio.ts            # FFmpeg 管线 → VB-Cable
+│   ├── audio.ts            # AudioPipe 工厂 (3 种模式)
+│   └── wasapi.ts           # WinMM waveOut → VB-Cable
 ├── public/                 # 手机端页面
 │   ├── index.html          # 手机 UI
 │   └── client.js           # WebCodecs + WebSocket 客户端
@@ -188,7 +188,7 @@ darkmic/
 └── init.sh                 # 验证脚本
 ```
 
-### Phase 2（可选）
+### 未来方向（可选）
 
 如果需要更低延迟，可将传输层升级为 **WebRTC**（`RTCPeerConnection`），WebSocket 仅用于信令。
 
@@ -229,7 +229,7 @@ pnpm run package
 |:---:|---|---|:---:|
 | F-001 | 项目脚手架 + HTTPS 证书 | 2026-05-13 | ✅ |
 | F-002 | WebCodecs + WebSocket 管线 | 2026-05-13 | ✅ |
-| F-003 | FFmpeg 解码 → VB-Cable | — | 📝 |
+| F-003 | opusscript 解码 → WinMM → VB-Cable | 2026-05-16 | ✅ |
 | F-004 | 二维码 + 连接体验 | — | 📝 |
 | F-005 | 延迟调优 + 质量控制 | — | 📝 |
 | F-006 | WebRTC P2P 传输 | — | ⏸️ |
