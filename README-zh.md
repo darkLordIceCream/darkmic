@@ -109,6 +109,7 @@
 # 安装系统依赖 (Windows)
 winget install ffmpeg
 winget install sox
+winget install OpenSSL.Light
 ```
 
 还需安装 [VB-Cable](https://vb-audio.com/Cable/)（虚拟声卡驱动）。手机和电脑都装 Chrome，连同一个 WiFi。

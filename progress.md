@@ -2,7 +2,7 @@
 
 ## Current State | 当前状态
 
-**Last Updated | 最后更新:** 2025-07-05
+**Last Updated | 最后更新:** 2026-05-16
 **Session | 会话:** F-003 implementation — audio pipeline with opusscript + ffplay playback
 **Active Feature | 当前功能:** F-003 (in-progress | 进行中)
 

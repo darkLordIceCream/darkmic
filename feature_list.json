@@ -28,7 +28,7 @@
       "descriptionZh": "服务端解码 opus 为 PCM，输出到 VB-Cable 虚拟声卡，实现手机麦克风→PC 音频端到端通路",
       "dependencies": ["F-002"],
       "status": "in-progress",
-      "evidence": "Phase 1-2 done: AudioPipe with file/ffplay/wasapi modes. opusscript decode verified with sine wave → ffplay playback (6552 bytes processed). WASAPI mode implemented but needs VB-Cable driver for verification. 2025-07-05"
+      "evidence": "Phase 1-2 done: AudioPipe with file/ffplay/wasapi modes. opusscript decode verified with sine wave → ffplay playback (6552 bytes processed). WASAPI mode implemented but needs VB-Cable driver for verification. 2026-05-14"
     },
     {
       "id": "F-004",

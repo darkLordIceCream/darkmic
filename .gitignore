@@ -5,3 +5,4 @@ dist/
 *.key
 certs/
 .env
+*.log
