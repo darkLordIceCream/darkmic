@@ -1,5 +1,5 @@
 <p align="center">
-  <samp>English &nbsp;|&nbsp; <a href="README-zh.md">简体中文</a></samp>
+  <samp>English &nbsp;｜&nbsp; <a href="README-zh.md">简体中文</a></samp>
 </p>
 
 <br>
@@ -117,7 +117,8 @@ winget install ffmpeg
 winget install OpenSSL.Light
 ```
 
-Also required: [VB-Cable](https://vb-audio.com/Cable/) (virtual audio driver) and [Chrome](https://www.google.com/chrome/) on both PC and phone. Both devices on the same WiFi.
+> [!IMPORTANT]
+> Also required: [VB-Cable](https://vb-audio.com/Cable/) (virtual audio driver) and [Chrome](https://www.google.com/chrome/) on both PC and phone. Both devices on the same WiFi.
 
 **Run**
 
@@ -243,7 +244,7 @@ No. darkmic is designed for <b>local network only</b> (same WiFi subnet). There 
 <br>
 
 <p align="center">
-  <samp>English &nbsp;|&nbsp; <a href="README-zh.md">简体中文</a></samp>
+  <samp>English &nbsp;｜&nbsp; <a href="README-zh.md">简体中文</a></samp>
 </p>
 
 <p align="center">

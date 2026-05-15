@@ -1,5 +1,5 @@
 <p align="center">
-  <samp><a href="README.md">English</a> &nbsp;|&nbsp; 简体中文</samp>
+  <samp><a href="README.md">English</a> &nbsp;｜&nbsp; 简体中文</samp>
 </p>
 
 <br>
@@ -117,7 +117,8 @@ winget install ffmpeg
 winget install OpenSSL.Light
 ```
 
-还需安装 [VB-Cable](https://vb-audio.com/Cable/)（虚拟声卡驱动）。手机和电脑都装 Chrome，连同一个 WiFi。
+> [!IMPORTANT]
+> 还需安装 [VB-Cable](https://vb-audio.com/Cable/)（虚拟声卡驱动）。手机和电脑都装 Chrome，连同一个 WiFi。
 
 **运行**
 
@@ -243,7 +244,7 @@ pnpm test:audio -- wasapi   # 音频管线测试 → VB-Cable 输出
 <br>
 
 <p align="center">
-  <samp><a href="README.md">English</a> &nbsp;|&nbsp; 简体中文</samp>
+  <samp><a href="README.md">English</a> &nbsp;｜&nbsp; 简体中文</samp>
 </p>
 
 <p align="center">
