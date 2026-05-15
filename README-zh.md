@@ -1,43 +1,59 @@
 <p align="center">
-  <a href="README.md"><img src="https://img.shields.io/badge/English-888?style=flat-square&logo=googletranslate&logoColor=white" alt="English"></a>
-  <img src="https://img.shields.io/badge/简体中文-333?style=flat-square" alt="简体中文">
+  <a href="README.md"><img src="https://img.shields.io/badge/English-555?style=flat-square&logo=googletranslate&logoColor=white" alt="English"></a>
+  <img src="https://img.shields.io/badge/简体中文-1a1a1a?style=flat-square" alt="简体中文">
 </p>
 
 <br>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/darkmic-000?style=flat-square" alt="">
+  <picture>
+    <img src="https://img.shields.io/badge/darkmic-1a1a1a?style=for-the-badge" alt="darkmic">
+  </picture>
 </p>
 
-<h1 align="center">
-  <code>手机 → 电脑 · 无线麦克风</code>
-</h1>
+<p align="center">
+  <sup><code>手机 → 电脑</code>&nbsp; · &nbsp;无线麦克风</sup>
+</p>
 
 <p align="center">
   <b>用安卓手机或 iPad 给你的 Windows 电脑做无线麦克风。</b><br>
-  <i>只需 Chrome。手机零安装。不上云。</i>
+  <sub><i>只需 Chrome。 &nbsp;手机零安装。 &nbsp;不上云。</i></sub>
 </p>
 
 <br>
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/darkLordIceCream/darkmic?style=flat-square&label=版本&color=333" alt="">
-  <img src="https://img.shields.io/github/last-commit/darkLordIceCream/darkmic?style=flat-square&label=更新&color=22c55e" alt="">
-  <img src="https://img.shields.io/github/license/darkLordIceCream/darkmic?style=flat-square&label=许可&color=blue" alt="">
+  <a href="https://github.com/darkLordIceCream/darkmic/releases"><img src="https://img.shields.io/github/v/release/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=555" alt="版本"></a>
+  <a href="https://github.com/darkLordIceCream/darkmic/commits/main"><img src="https://img.shields.io/github/last-commit/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=22c55e" alt="更新"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=3b82f6" alt="许可"></a>
   <br>
-  <img src="https://img.shields.io/badge/-Chrome-4285F4?style=flat-square&logo=googlechrome&logoColor=white" alt="">
-  <img src="https://img.shields.io/badge/-Windows-0078D4?style=flat-square&logo=windows&logoColor=white" alt="">
-  <img src="https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="">
-  <img src="https://img.shields.io/badge/-pnpm-F69220?style=flat-square&logo=pnpm&logoColor=white" alt="">
+  <img src="https://img.shields.io/badge/Chrome-333?style=flat-square&logo=googlechrome&logoColor=white" alt="Chrome">
+  <img src="https://img.shields.io/badge/Windows-333?style=flat-square&logo=windows&logoColor=white" alt="Windows">
+  <img src="https://img.shields.io/badge/TypeScript-333?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/pnpm-333?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm">
+  <img src="https://img.shields.io/badge/Opus-333?style=flat-square&logo=opus&logoColor=white" alt="Opus">
+  <img src="https://img.shields.io/badge/WebSocket-333?style=flat-square&logo=socket.io&logoColor=white" alt="WebSocket">
 </p>
 
 <br>
-<hr>
+
+<p align="center">
+  <samp>
+    <a href="#-工作方式">工作方式</a> ·
+    <a href="#-功能特点">功能特点</a> ·
+    <a href="#-快速开始">快速开始</a> ·
+    <a href="#-架构">架构</a> ·
+    <a href="#-开发命令">开发</a> ·
+    <a href="#-功能状态">状态</a> ·
+    <a href="#-常见问题">常见问题</a>
+  </samp>
+</p>
+
 <br>
 
-## ‎ ‎ ‎ ⚡ 工作方式
+---
 
-<br>
+### ⚡ &nbsp;工作方式
 
 ```
                         ┌─────────────────────────────────────────────────┐
@@ -61,48 +77,40 @@
                         │          🖥️  Windows PC (darkmic.exe)           │
                         │                                                 │
                         │   WebSocket 接收                                 │
-                        │     → opusscript 解码 (opus → PCM)                  │
-                        │     → WinMM waveOut → VB-CABLE Input                 │
+                        │     → opusscript 解码 (opus → PCM)              │
+                        │     → WinMM waveOut → VB-CABLE Input            │
                         │     → VB-CABLE Output (系统虚拟麦克风)            │
                         │                                                 │
                         │   ✅ 任何应用都可以把它当作普通麦克风              │
                         └─────────────────────────────────────────────────┘
 ```
 
-> 音频**单向传输**（手机 → 电脑），端到端延迟约 **80ms**。
+> 音频**单向传输**（手机 → 电脑）。 &nbsp;端到端延迟约 **80ms**。
 
-<br>
-<hr>
-<br>
+---
 
-## ‎ ‎ ‎ ✨ 功能特点
-
-<br>
+### ✨ &nbsp;功能特点
 
 <div align="center">
 
 | | |
 |---|---|
-| 📱 **手机零安装** | 只需 Chrome，不用装 App |
-| 🔒 **纯局域网** | 不上云，数据不出家门 |
-| ⚡ **~80ms 低延迟** | WebCodecs AudioEncoder，跳过容器包装 |
-| 🔊 **Opus 32kbps** | 人声优化，带宽友好 |
-| 🔌 **VB-Cable 输出** | 系统级虚拟麦克风 |
-| 📦 **单文件 .exe** | pkg 打包，FFmpeg 内置 |
-| 🖥️ **Windows 10/11** | 支持安卓手机和 iPad |
-| 🌐 **二维码连接** | *(即将到来)* |
+| 📱 &nbsp;**手机零安装** | 只需 Chrome，不用装 App |
+| 🔒 &nbsp;**纯局域网** | 不上云，数据不出家门 |
+| ⚡ &nbsp;**~80ms 低延迟** | WebCodecs AudioEncoder，跳过容器包装 |
+| 🔊 &nbsp;**Opus 32kbps** | 人声优化，带宽友好 |
+| 🔌 &nbsp;**VB-Cable 输出** | 系统级虚拟麦克风 |
+| 📦 &nbsp;**单文件 .exe** | pkg 打包，FFmpeg 内置 |
+| 🖥️ &nbsp;**Windows 10/11** | 支持安卓手机和 iPad |
+| 🌐 &nbsp;**二维码连接** | *(即将到来)* |
 
 </div>
 
-<br>
-<hr>
-<br>
+---
 
-## ‎ ‎ ‎ 🚀 快速开始
+### 🚀 &nbsp;快速开始
 
-<br>
-
-### 前置条件
+**前置条件**
 
 ```bash
 # 安装系统依赖 (Windows)
@@ -112,7 +120,7 @@ winget install OpenSSL.Light
 
 还需安装 [VB-Cable](https://vb-audio.com/Cable/)（虚拟声卡驱动）。手机和电脑都装 Chrome，连同一个 WiFi。
 
-### 运行
+**运行**
 
 ```bash
 git clone https://github.com/darkLordIceCream/darkmic.git
@@ -127,48 +135,32 @@ pnpm run dev
   ➜  Phone: open https://192.168.1.100:3000 in Chrome
 ```
 
-### 连接
+**连接**
 
 <table>
-<tr>
-<td>①</td>
-<td>手机 Chrome 打开终端显示的网址</td>
-</tr>
-<tr>
-<td>②</td>
-<td>点<b>高级 → 继续前往</b>（自签名证书 — <a href="#faq">正常现象</a>）</td>
-</tr>
-<tr>
-<td>③</td>
-<td>点<b>「Start Microphone」</b> → 允许麦克风权限</td>
-</tr>
-<tr>
-<td>④</td>
-<td>说话 — 音频实时传输到电脑</td>
-</tr>
+<tr><td>①</td><td>手机 Chrome 打开终端显示的网址</td></tr>
+<tr><td>②</td><td>点<b>「高级 → 继续前往」</b>（自签名证书 — <a href="#-常见问题">正常现象</a>）</td></tr>
+<tr><td>③</td><td>点<b>「Start Microphone」</b> → 允许麦克风权限</td></tr>
+<tr><td>④</td><td>说话 — 音频实时传输到电脑</td></tr>
 </table>
 
-<br>
-<hr>
-<br>
+---
 
-## ‎ ‎ ‎ 🏗️ 架构
+### 🏗️ &nbsp;架构
 
-<br>
-
-### 技术栈
+**技术栈**
 
 | 层 | 技术 |
-|:---|---|
+|:---|:---|
 | 服务端运行时 | Node.js + TypeScript |
 | HTTP | Express |
-| WebSocket | ws |
+| WebSocket | `ws` |
 | 音频编码（浏览器） | WebCodecs `AudioEncoder` (opus) |
-| 音频解码（服务端） | opusscript (纯 JS) |
-| 音频输出 | WinMM waveOut (koffi FFI) |
+| 音频解码（服务端） | `opusscript` (纯 JS) |
+| 音频输出 | WinMM waveOut via `koffi` |
 | 打包 | `@yao-pkg/pkg` |
 
-### 项目结构
+**项目结构**
 
 ```
 darkmic/
@@ -187,66 +179,46 @@ darkmic/
 └── init.sh                 # 验证脚本
 ```
 
-### 未来方向（可选）
+> **未来方向：** 如果需要更低延迟，可将传输层升级为 **WebRTC**（`RTCPeerConnection`），WebSocket 仅用于信令。
 
-如果需要更低延迟，可将传输层升级为 **WebRTC**（`RTCPeerConnection`），WebSocket 仅用于信令。
+---
 
-<br>
-<hr>
-<br>
-
-## ‎ ‎ ‎ 🧪 开发命令
-
-<br>
+### 🧪 &nbsp;开发命令
 
 ```bash
-# 完整验证
-./init.sh
-
-# 开发服务器（热重载）
-pnpm run dev
-
-# TypeScript 类型检查
-pnpm run typecheck
-
-# 编译到 dist/
-pnpm run build
-
-# 打包为 Windows exe
-pnpm run package
+./init.sh               # 完整验证（安装 + 类型检查 + 构建 + 音频测试）
+pnpm run dev            # 开发服务器（热重载）
+pnpm run typecheck      # TypeScript 类型检查
+pnpm run build          # 编译到 dist/
+pnpm run start          # 生产服务器（node dist/index.js）
+pnpm test:audio         # 音频管线测试 → file 模式
+pnpm test:audio -- ffplay   # 音频管线测试 → 扬声器播放
+pnpm test:audio -- wasapi   # 音频管线测试 → VB-Cable 输出
 ```
 
-<br>
-<hr>
-<br>
+---
 
-## ‎ ‎ ‎ ✅ 功能状态
+### ✅ &nbsp;功能状态
 
-<br>
+| ID | 功能 | 完成日期 | |
+|:---:|:---|---|:---:|
+| F-001 | 项目脚手架 + HTTPS 证书 | 2026-05-13 | `done` |
+| F-002 | WebCodecs + WebSocket 管线 | 2026-05-13 | `done` |
+| F-003 | opusscript 解码 → WinMM → VB-Cable | 2026-05-16 | `done` |
+| F-004 | 二维码 + 连接体验 | — | `todo` |
+| F-005 | 延迟调优 + 质量控制 | — | `todo` |
+| F-006 | WebRTC P2P 传输 | — | `deferred` |
+| F-007 | Windows pkg 打包 | — | `todo` |
+| F-008 | 安装程序 + 系统托盘 | — | `todo` |
 
-| ID | 功能 | | 状态 |
-|:---:|---|---|:---:|
-| F-001 | 项目脚手架 + HTTPS 证书 | 2026-05-13 | ✅ |
-| F-002 | WebCodecs + WebSocket 管线 | 2026-05-13 | ✅ |
-| F-003 | opusscript 解码 → WinMM → VB-Cable | 2026-05-16 | ✅ |
-| F-004 | 二维码 + 连接体验 | — | 📝 |
-| F-005 | 延迟调优 + 质量控制 | — | 📝 |
-| F-006 | WebRTC P2P 传输 | — | ⏸️ |
-| F-007 | Windows pkg 打包 | — | 📝 |
-| F-008 | 安装程序 + 系统托盘 | — | 📝 |
+---
 
-<br>
-<hr>
-<br>
-
-## ‎ ‎ ‎ ❓ 常见问题
-
-<br>
+### ❓ &nbsp;常见问题
 
 <details>
 <summary><b>为什么浏览器显示隐私警告？</b></summary>
 <br>
-服务端首次运行会自动生成自签名证书。Chrome 会因为不是正规 CA 签发而警告。连接仍然是加密的，局域网使用完全安全。点<b>高级 → 继续前往</b>即可。
+服务端首次运行会自动生成自签名证书。Chrome 会因为不是正规 CA 签发而警告。连接仍然是加密的，局域网使用完全安全。点<b>「高级 → 继续前往」</b>即可。
 </details>
 
 <br>
@@ -266,19 +238,18 @@ pnpm run package
 </details>
 
 <br>
-<hr>
+
+---
+
 <br>
 
 <p align="center">
-  <a href="README.md"><img src="https://img.shields.io/badge/English-888?style=flat-square&logo=googletranslate&logoColor=white" alt="English"></a>
-  <img src="https://img.shields.io/badge/简体中文-333?style=flat-square" alt="简体中文">
+  <a href="README.md"><img src="https://img.shields.io/badge/English-555?style=flat-square&logo=googletranslate&logoColor=white" alt="English"></a>
+  <img src="https://img.shields.io/badge/简体中文-1a1a1a?style=flat-square" alt="简体中文">
   &nbsp;&nbsp;
-  <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT">
+  <img src="https://img.shields.io/badge/license-MIT-3b82f6?style=flat-square" alt="MIT">
 </p>
 
 <p align="center">
-  <sub>
-    献给需要一个麦克风但手边没有的人。<br>
-    © 2026 darkLordIceCream
-  </sub>
+  <sub>献给需要一个麦克风但手边没有的人。 &nbsp;© 2026 darkLordIceCream</sub>
 </p>
