@@ -1,7 +1,6 @@
-<p align="right">
-  <a href="README.md">
-    <img src="https://img.shields.io/badge/-English-333?style=flat-square" alt="English">
-  </a>
+<p align="center">
+  <a href="README.md"><img src="https://img.shields.io/badge/English-888?style=flat-square&logo=googletranslate&logoColor=white" alt="English"></a>
+  <img src="https://img.shields.io/badge/简体中文-333?style=flat-square" alt="简体中文">
 </p>
 
 <br>
@@ -271,9 +270,8 @@ pnpm run package
 <br>
 
 <p align="center">
-  <a href="README.md">
-    <img src="https://img.shields.io/badge/-English-333?style=flat-square" alt="English">
-  </a>
+  <a href="README.md"><img src="https://img.shields.io/badge/English-888?style=flat-square&logo=googletranslate&logoColor=white" alt="English"></a>
+  <img src="https://img.shields.io/badge/简体中文-333?style=flat-square" alt="简体中文">
   &nbsp;&nbsp;
   <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT">
 </p>

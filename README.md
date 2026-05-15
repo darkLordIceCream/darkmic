@@ -1,7 +1,6 @@
-<p align="right">
-  <a href="README-zh.md">
-    <img src="https://img.shields.io/badge/-简体中文-333?style=flat-square" alt="简体中文">
-  </a>
+<p align="center">
+  <img src="https://img.shields.io/badge/English-333?style=flat-square" alt="English">
+  <a href="README-zh.md"><img src="https://img.shields.io/badge/简体中文-888?style=flat-square&logo=googletranslate&logoColor=white" alt="简体中文"></a>
 </p>
 
 <br>
@@ -271,9 +270,8 @@ No. darkmic is designed for <b>local network only</b> (same WiFi subnet). There 
 <br>
 
 <p align="center">
-  <a href="README-zh.md">
-    <img src="https://img.shields.io/badge/-简体中文-333?style=flat-square" alt="简体中文">
-  </a>
+  <img src="https://img.shields.io/badge/English-333?style=flat-square" alt="English">
+  <a href="README-zh.md"><img src="https://img.shields.io/badge/简体中文-888?style=flat-square&logo=googletranslate&logoColor=white" alt="简体中文"></a>
   &nbsp;&nbsp;
   <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT">
 </p>
