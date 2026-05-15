@@ -3,7 +3,7 @@ import { createServer } from 'node:https';
 import { networkInterfaces } from 'node:os';
 import { WebSocketServer } from 'ws';
 import { loadOrCreateCertificates } from './cert.js';
-import { createAudioPipe, type AudioPipeMode } from './audio.js';
+import { createAudioPipe, type AudioPipeMode, type AudioPipeState } from './audio.js';
 
 const certs = loadOrCreateCertificates();
 const app = express();
@@ -28,9 +28,21 @@ if (audioMode !== 'file') {
 wss.on('connection', (ws) => {
   let chunkCount = 0;
   let totalBytes = 0;
-  const audioPipe = createAudioPipe({ mode: audioMode });
+  function sendState(state: AudioPipeState | 'connected') {
+    if (ws.readyState === ws.OPEN) {
+      ws.send(JSON.stringify({ type: 'state', state }));
+    }
+  }
+
+  const audioPipe = createAudioPipe({
+    mode: audioMode,
+    onStateChange: (state) => {
+      sendState(state);
+    },
+  });
 
   console.log(`Phone connected — audio pipe: ${audioPipe.mode}`);
+  sendState('connected');
 
   ws.on('message', (data) => {
     if (Buffer.isBuffer(data)) {
@@ -38,7 +50,7 @@ wss.on('connection', (ws) => {
       totalBytes += data.length;
       audioPipe.write(data);
       console.log(
-        `Received chunk #${chunkCount}: ${data.length} bytes (total: ${totalBytes} bytes)`,
+        `Chunk #${chunkCount}: ${data.length} bytes (total ${totalBytes})`,
       );
     }
   });
@@ -52,6 +64,7 @@ wss.on('connection', (ws) => {
 
   ws.on('error', (err) => {
     console.error('WebSocket error:', err.message);
+    sendState('error');
   });
 });
 

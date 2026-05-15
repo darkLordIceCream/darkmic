@@ -5,31 +5,41 @@
  * F-003: Multiple output modes with progressive verification:
  *   - file:    Write framed opus to disk (Phase 1 — data integrity)
  *   - ffplay:  Opusscript decode → PCM → ffplay speaker output (Phase 2)
- *   - wasapi:  Opusscript decode → PCM → FFmpeg → VB-Cable (Phase 3)
+ *   - wasapi:  Opusscript decode → PCM → WinMM waveOut → VB-Cable (Phase 3)
+ *
+ * Phase 4 hardening:
+ *   - ffplay auto-restart on crash (up to 3 attempts)
+ *   - State change callbacks for connection feedback
  *
  * Decoding strategy:
  *   Node.js `opusscript` decodes opus → s16le PCM in-process
  *   (avoids FFmpeg raw opus demuxer compatibility issues).
- *   FFmpeg/ffplay handles PCM → audio device output.
+ *   ffplay handles PCM → audio device output (speakers).
+ *   WinMM waveOut API (via koffi) handles PCM → VB-Cable (no FFmpeg needed).
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createWriteStream, type WriteStream } from 'node:fs';
 import { resolve } from 'node:path';
 import OpusScript from 'opusscript';
+import { createWasapiOutput } from './wasapi.js';
 
 // ── Types ──────────────────────────────────────────────────────────
 
 export type AudioPipeMode = 'file' | 'ffplay' | 'wasapi';
 
+export type AudioPipeState = 'started' | 'restarting' | 'error' | 'stopped';
+
 export interface AudioPipeOptions {
   mode?: AudioPipeMode;
   /** Output file path (file mode only). Default: ./darkmic-audio.raw */
   outputPath?: string;
-  /** FFmpeg executable path (ffplay/wasapi modes). Default: 'ffmpeg' (via PATH) */
+  /** FFmpeg executable path (ffplay mode). Default: 'ffmpeg' (via PATH) */
   ffmpegPath?: string;
   /** VB-Cable device name (wasapi mode only) */
   cableDevice?: string;
+  /** Called when pipe state changes (for UI feedback) */
+  onStateChange?: (state: AudioPipeState) => void;
 }
 
 export interface AudioPipe {
@@ -108,74 +118,96 @@ function createFilePipe(outputPath: string): AudioPipe {
   };
 }
 
-/** Phase 2: Opusscript decode → s16le PCM → FFmpeg DirectSound playback. */
-function createFfplayPipe(ffmpegPath: string): AudioPipe {
+/** Phase 2: Opusscript decode → s16le PCM → ffplay speaker output. */
+function createFfplayPipe(ffmpegPath: string, onStateChange?: (s: AudioPipeState) => void): AudioPipe {
   let byteCount = 0;
   let proc: ChildProcess | null = null;
   let closed = false;
-  let decoder = createOpusDecoder();
+  let restartCount = 0;
+  const MAX_RESTARTS = 3;
+  const decoder = createOpusDecoder();
 
-  // Derive ffplay path from ffmpeg location
   const sep = ffmpegPath.includes('\\') ? '\\' : '/';
   const idx = ffmpegPath.lastIndexOf(sep);
   const binDir = idx >= 0 ? ffmpegPath.substring(0, idx) : '.';
   const fplay = `${binDir}${sep}ffplay${process.platform === 'win32' ? '.exe' : ''}`;
 
-  try {
-    // ffplay reads s16le PCM from stdin, plays through default audio device
-    proc = spawn(fplay, [
-      '-f', 's16le',
-      '-ar', '48000',
-      '-nodisp',
-      '-autoexit',
-      '-loglevel', 'quiet',
-      'pipe:0',
-    ], {
-      stdio: ['pipe', 'inherit', 'inherit'],
-    });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[AudioPipe:ffplay] Failed to spawn FFmpeg: ${msg}`);
+  function spawnFfplay(): ChildProcess | null {
+    try {
+      const child = spawn(fplay, [
+        '-f', 's16le',
+        '-ar', '48000',
+        '-nodisp',
+        '-autoexit',
+        '-loglevel', 'quiet',
+        'pipe:0',
+      ], {
+        stdio: ['pipe', 'inherit', 'inherit'],
+      });
+
+      child.on('error', (err) => {
+        console.error(`[AudioPipe:ffplay] error: ${err.message}`);
+      });
+
+      child.on('exit', (code) => {
+        if (closed) return;
+        if (code !== 0 && restartCount < MAX_RESTARTS) {
+          restartCount++;
+          console.warn(
+            `[AudioPipe:ffplay] exited code=${code}, restarting (${restartCount}/${MAX_RESTARTS})...`,
+          );
+          onStateChange?.('restarting');
+          proc = spawnFfplay();
+        } else if (code !== 0) {
+          console.error(
+            `[AudioPipe:ffplay] exited code=${code}, max restarts reached`,
+          );
+          onStateChange?.('error');
+        }
+      });
+
+      return child;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[AudioPipe:ffplay] spawn failed: ${msg}`);
+      return null;
+    }
   }
 
-  const pipeProcess = proc;
+  proc = spawnFfplay();
 
-  if (!pipeProcess) {
-    console.warn('[AudioPipe:ffplay] FFmpeg not available — audio will be discarded');
+  if (!proc) {
+    console.warn('[AudioPipe:ffplay] not available — audio will be discarded');
+    onStateChange?.('error');
   } else {
-    pipeProcess.on('error', (err) => {
-      console.error(`[AudioPipe:ffplay] FFmpeg error: ${err.message}`);
-    });
-    pipeProcess.on('exit', (code) => {
-      if (code !== 0 && !closed) {
-        console.warn(`[AudioPipe:ffplay] FFmpeg exited with code ${code}`);
-      }
-    });
-    console.log('[AudioPipe:ffplay] Pipeline started (OpusScript → ffplay)');
+    console.log('[AudioPipe:ffplay] started (OpusScript → ffplay)');
+    onStateChange?.('started');
   }
 
   return {
     mode: 'ffplay',
     write(chunk: Buffer) {
-      if (closed || !pipeProcess) return;
+      if (closed) return;
       const pcm = decodeOpusToPcm(decoder, chunk);
-      if (pcm && pipeProcess.stdin?.writable) {
-        pipeProcess.stdin.write(pcm);
+      if (!pcm) return;
+      const target = proc;
+      if (target?.stdin?.writable) {
+        try { target.stdin.write(pcm); } catch { /* process died between check and write */ }
         byteCount += chunk.length;
       }
     },
     close() {
       closed = true;
-      if (pipeProcess?.stdin?.writable) {
-        pipeProcess.stdin.end();
+      if (proc?.stdin?.writable) {
+        proc.stdin.end();
       }
       if (decoder) {
         try { decoder.delete(); } catch { /* ignore */ }
-        decoder = null;
       }
       setTimeout(() => {
-        pipeProcess?.kill('SIGTERM');
+        proc?.kill('SIGTERM');
       }, 300);
+      onStateChange?.('stopped');
       console.log(
         `[AudioPipe:ffplay] Closed — ${byteCount} bytes processed`,
       );
@@ -183,69 +215,38 @@ function createFfplayPipe(ffmpegPath: string): AudioPipe {
   };
 }
 
-/** Phase 3: Opusscript decode → s16le PCM → FFmpeg WASAPI → VB-Cable. */
-function createWasapiPipe(ffmpegPath: string, cableDevice: string): AudioPipe {
+/** Phase 3: Opusscript decode → s16le PCM → WinMM waveOut → VB-Cable. */
+function createWasapiPipe(cableDevice: string, onStateChange?: (s: AudioPipeState) => void): AudioPipe {
   let byteCount = 0;
-  let proc: ChildProcess | null = null;
   let closed = false;
-  let decoder = createOpusDecoder();
+  const decoder = createOpusDecoder();
+  const wasapi = createWasapiOutput(cableDevice);
 
-  try {
-    proc = spawn(ffmpegPath, [
-      '-f', 's16le',
-      '-ar', '48000',
-      '-ac', '1',
-      '-i', 'pipe:0',
-      '-f', 'wasapi',
-      '-bufsize', '120ms',
-      cableDevice,
-    ], {
-      stdio: ['pipe', 'inherit', 'inherit'],
-    });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[AudioPipe:wasapi] Failed to spawn FFmpeg: ${msg}`);
-  }
-
-  const pipeProcess = proc;
-
-  if (!pipeProcess) {
-    console.warn('[AudioPipe:wasapi] FFmpeg not available — audio will be discarded');
+  if (!wasapi) {
+    console.warn('[AudioPipe:wasapi] VB-Cable not available');
+    onStateChange?.('error');
   } else {
-    pipeProcess.on('error', (err) => {
-      console.error(`[AudioPipe:wasapi] FFmpeg error: ${err.message}`);
-    });
-    pipeProcess.on('exit', (code) => {
-      if (code !== 0 && !closed) {
-        console.warn(`[AudioPipe:wasapi] FFmpeg exited with code ${code}`);
-        // Auto-restart in Phase 4
-      }
-    });
-    console.log(`[AudioPipe:wasapi] Pipeline started (OpusScript → ${cableDevice})`);
+    console.log('[AudioPipe:wasapi] started (OpusScript → WinMM → VB-Cable)');
+    onStateChange?.('started');
   }
 
   return {
     mode: 'wasapi',
     write(chunk: Buffer) {
-      if (closed || !pipeProcess) return;
+      if (closed || !wasapi) return;
       const pcm = decodeOpusToPcm(decoder, chunk);
-      if (pcm && pipeProcess.stdin?.writable) {
-        pipeProcess.stdin.write(pcm);
+      if (pcm) {
+        wasapi.write(pcm);
         byteCount += chunk.length;
       }
     },
     close() {
       closed = true;
-      if (pipeProcess?.stdin?.writable) {
-        pipeProcess.stdin.end();
-      }
       if (decoder) {
         try { decoder.delete(); } catch { /* ignore */ }
-        decoder = null;
       }
-      setTimeout(() => {
-        pipeProcess?.kill('SIGTERM');
-      }, 500);
+      wasapi?.close();
+      onStateChange?.('stopped');
       console.log(
         `[AudioPipe:wasapi] Closed — ${byteCount} bytes processed`,
       );
@@ -267,14 +268,15 @@ export function createAudioPipe(options: AudioPipeOptions = {}): AudioPipe {
   const mode = options.mode || 'file';
   const ffmpegPath = options.ffmpegPath || 'ffmpeg';
   const cableDevice = options.cableDevice || 'CABLE Input (VB-Audio Virtual Cable)';
+  const onStateChange = options.onStateChange;
 
   switch (mode) {
     case 'file':
       return createFilePipe(options.outputPath || './darkmic-audio.raw');
     case 'ffplay':
-      return createFfplayPipe(ffmpegPath);
+      return createFfplayPipe(ffmpegPath, onStateChange);
     case 'wasapi':
-      return createWasapiPipe(ffmpegPath, cableDevice);
+      return createWasapiPipe(cableDevice, onStateChange);
     default: {
       console.warn(`[AudioPipe] Unknown mode "${mode}", falling back to file`);
       return createFilePipe(options.outputPath || './darkmic-audio.raw');

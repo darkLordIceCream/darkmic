@@ -1,2 +1,5 @@
 onlyBuiltDependencies:
   - '@discordjs/opus'
+
+ignoredBuiltDependencies:
+  - koffi

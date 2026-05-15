@@ -14,7 +14,7 @@
  */
 
 import { createAudioPipe, type AudioPipeMode, type AudioPipe } from '../src/audio.js';
-import { readFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { argv } from 'node:process';
 
@@ -68,10 +68,6 @@ const SILENCE_FRAME = Buffer.from([0xfc, 0xff, 0x00, 0x00, 0x00]);
 function loadTestData(): Buffer[] {
   if (inputFile) {
     const path = resolve(inputFile);
-    if (!existsSync(path)) {
-      console.error(`Input file not found: ${path}`);
-      process.exit(1);
-    }
     const data = readFileSync(path);
     console.log(`Loaded ${data.length} bytes from ${path}`);
     // Split into chunks (every ~400 bytes simulates real WebSocket chunks)
@@ -119,12 +115,12 @@ async function main() {
   if (mode === 'file') {
     await new Promise((r) => setTimeout(r, 100));
     const outputPath = resolve('./test-output.raw');
-    if (existsSync(outputPath)) {
+    try {
       const stats = statSync(outputPath);
       const pass = stats.size > 0;
       console.log(`\n${pass ? '✅ PASS' : '❌ FAIL'}: Output file size = ${stats.size} bytes`);
       process.exit(pass ? 0 : 1);
-    } else {
+    } catch {
       console.log(`\n❌ FAIL: Output file not found at ${outputPath}`);
       process.exit(1);
     }
