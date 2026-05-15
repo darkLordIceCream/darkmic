@@ -3,7 +3,7 @@
 ## Current State | 当前状态
 
 **Last Updated | 最后更新:** 2026-05-16
-**Session | 会话:** F-003 implementation — audio pipeline with opusscript + ffplay playback
+**Session | 会话:** Harness assessment + cert hotfix + end-of-session cleanup
 **Active Feature | 当前功能:** F-003 (in-progress | 进行中)
 
 ## Status | 状态
@@ -52,6 +52,7 @@
 
 ## Blockers / Risks | 阻塞项 / 风险
 
+- **Git push blocked**: HTTPS credentials unavailable in WSL. `b171313` committed locally, needs `git push` from Windows (PowerShell) with stored GitHub credentials. | Git 推送在 WSL 中因凭据问题受阻，需在 Windows 端推送
 - **FFmpeg Gyan build lacks audio output devices**: `-devices` shows only input devices (dshow, openal). Cannot use FFmpeg for direct audio playback. Mitigation: use ffplay for output. | FFmpeg Gyan 构建版没有音频输出设备，用 ffplay 替代
 - **No raw opus demuxer in FFmpeg**: `-f opus` not available. Mitigation: decode opus in Node.js via opusscript, pipe PCM to ffplay/FFmpeg. | FFmpeg 无 raw opus 解析器，改用 Node.js 解码
 - **opusscript decoder fidelity**: Pure JS decode may have edge cases with non-standard frame sizes. Test with real phone audio needed. | 纯 JS 解码器在非标准帧大小时可能有边缘情况
@@ -72,29 +73,31 @@
 
 ## Files Modified This Session | 本次修改的文件
 
-- `src/audio.ts` — Rewrote from stub to full AudioPipe with 3 output modes, opusscript decode | 从桩重写为完整音频管线
-- `src/index.ts` — Integrated AudioPipe into WebSocket handler, added AUDIO_PIPE_MODE env | 集成音频管线
-- `scripts/test-audio.ts` — New: manual test script for all modes | 新增测试脚本
-- `scripts/gen-sine-test.ts` — New: sine wave generator for E2E audio test | 新增正弦波测试
-- `scripts/gen-sine-file.ts` — New: PCM file generator | 新增 PCM 文件生成
-- `package.json` — Added test:audio script, removed @discordjs/opus, added opusscript | 更新依赖和脚本
-- `pnpm-workspace.yaml` — New: required by pnpm 10 for build script approval | 新增工作区配置
-- `pnpm-lock.yaml` — Updated dependencies | 更新锁文件
-- `progress.md` — Session tracking update | 更新
+- `AGENTS.md` — Merged CLAUDE.md content: CLAUDE.md replacement note, source code architecture section, fix Phase 1 diagram (FFmpeg→opusscript), add test:audio commands, add Key Implementation Notes | 合并 CLAUDE.md 内容
+- `init.sh` — Remove 2>/dev/null error suppression (typecheck/build now fatal), add test:audio step, fix CRLF → LF | 去掉静默吞错
+- `feature_list.json` — Fix F-003 evidence date 2025→2026 | 日期修正
+- `progress.md` — Fix date, session tracking update | 日期修正
+- `README.md` / `README-zh.md` — Add openssl to prerequisites | 前置条件新增 openssl
+- `.gitignore` — Add `*.log` | 忽略日志文件
+- `.gitattributes` — New: `* text=auto` + `*.sh text eol=lf` | 换行符规范化
+- `src/cert.ts` — Reverted to openssl-only (simple version) after brief Node.js crypto experiment | 回退到纯 openssl 版本
 
 ## Evidence of Completion | 完成证据
 
 - [x] `pnpm run typecheck` — clean | 类型检查通过
+- [x] `pnpm run build` — clean | 构建通过
+- [x] `./init.sh` — typecheck + build pass, audio skipped (WSL) | 验证通过
 - [x] File mode test: 100 synthetic opus frames → 800 bytes output | 文件模式验证通过
 - [x] ffplay mode test: 440Hz sine wave → opus encode → opusscript decode → ffplay speaker playback (6552 bytes processed) | 扬声器播放验证通过
+- [x] `openssl` dependency documented in README prerequisites | OpenSSL 依赖已文档化
 - [ ] E2E phone → PC audio: requires real phone + Windows with VB-Cable | 手机端到端验证待完成
 - [ ] WASAPI VB-Cable output: requires VB-Cable driver | VB-Cable 验证待完成
+- [ ] Push to remote: HTTPS auth blocked in WSL | 推送到远端受阻
 
 ## Notes for Next Session | 下次会话备注
 
-- **F-003 Phase 3**: Start server with `AUDIO_PIPE_MODE=wasapi`, connect phone on Windows with VB-Cable
-  - FFmpeg path on Windows: `C:\Users\<user>\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1.1-full_build\bin\ffmpeg.exe`
-  - Or add FFmpeg to PATH for simpler usage: `set PATH=%PATH%;C:\...\bin\`
+- **Push first**: Run `git push` from Windows PowerShell (not WSL) to push commit `b171313` | 下次先推送
+- **F-003 Phase 3**: Start server with `$env:AUDIO_PIPE_MODE="wasapi"`, connect phone on Windows with VB-Cable
 - **F-003 Phase 4**: Add FFmpeg process restart on crash, connection state feedback to phone UI
-- **Branch to use**: `feat/f-003-audio-decode` (NOT merged to main yet)
-- **Architecture decision**: opusscript decode + PCM pipe to ffplay works. WASAPI mode uses same PCM pipe approach to FFmpeg.
+- **Branch**: `feat/f-003-audio-decode` (NOT merged to main)
+- **Windows prerequisites**: `winget install ffmpeg sox OpenSSL.Light` + [VB-Cable](https://vb-audio.com/Cable/)
