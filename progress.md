@@ -3,8 +3,8 @@
 ## Current State | 当前状态
 
 **Last Updated | 最后更新:** 2026-05-16
-**Session | 会话:** F-003 code review cleanup + session close
-**Active Feature | 当前功能:** F-003 complete | F-003 已完成
+**Session | 会话:** F-003 PR review, merge to main, branch cleanup
+**Active Feature | 当前功能:** F-003 merged | F-003 已合并
 
 ## Status | 状态
 
@@ -51,16 +51,14 @@
 ### What's Next | 下一步
 
 1. **F-004**: Connection UX + QR code + error handling | 连接体验
-2. E2E phone → PC audio test with real phone | 手机端到端真实验证
-3. Merge feat/f-003-audio-decode → main | 合并到主分支
 
 ## Blockers / Risks | 阻塞项 / 风险
 
-- **Git push blocked**: HTTPS credentials unavailable in WSL. Needs `git push` from Windows PowerShell. | Git 推送在 WSL 中受阻，需 Windows 端推送
-- ~~**VB-Cable not installed**: Phase 3 WASAPI mode cannot be verified.~~ → Installed + verified 2026-05-16 | VB-Cable 已安装并验证
-- ~~**FFmpeg Gyan/BtbN builds lack WASAPI muxer**: `-f wasapi` output not available.~~ → Mitigation: WinMM waveOut API via koffi (pure JS FFI) | 改用 WinMM waveOut API
-- **opusscript decoder fidelity**: Pure JS decode may have edge cases with non-standard frame sizes. Real phone E2E passed — no issues observed with standard opus frames. | 纯 JS 解码器可能有边缘情况，但真机测试未发现问题
-- **No raw opus demuxer in FFmpeg**: `-f opus` not available. Mitigation: decode opus in Node.js via opusscript, pipe PCM to ffplay/FFmpeg. | FFmpeg 无 raw opus 解析器，改用 Node.js 解码
+- ~~**Git push blocked**~~ → Resolved: push from Windows PowerShell works | 推送问题已解决
+- ~~**VB-Cable not installed**~~ → Installed + verified 2026-05-16 | 已安装并验证
+- ~~**FFmpeg Gyan/BtbN builds lack WASAPI muxer**~~ → Mitigation: WinMM waveOut API via koffi | 改用 WinMM waveOut
+- **opusscript decoder fidelity**: Real phone E2E passed — no issues with standard opus frames. | 真机测试未发现问题
+- **No raw opus demuxer in FFmpeg**: Mitigation: decode in Node.js via opusscript. | 改用 Node.js 解码
 
 ### Accepted Risks (PR review, 2026-05-16) | 已接受的已知风险
 
@@ -118,9 +116,8 @@
 
 ## Notes for Next Session | 下次会话备注
 
-- **Push from Windows PowerShell**: Run `git push` from PowerShell (not WSL) to push all F-003 commits | 从 Windows PowerShell 推送所有提交
 - **Next feature**: F-004 Connection UX + QR code | 下一功能 F-004
-- **Branch**: `feat/f-003-audio-decode` — ready to merge to main | 可合并到 main
-- **Note**: `opusscript` 0.1.1 decoder works correctly with Chrome AudioEncoder opus output (no fidelity issues found in real phone test)
+- **Branch**: Start from main (`git checkout -b feat/f-004-connection-ux`)
+- **Known risks**: See "Accepted Risks" section above for deferred low-priority issues | 已知风险见上方记录
 - **Windows prerequisites**: `winget install ffmpeg OpenSSL.Light` + [VB-Cable](https://vb-audio.com/Cable/)
 - **WaveOut device name note**: WinMM truncates device names to 31 chars. "CABLE Input (VB-Audio Virtual C" is the correct match.
