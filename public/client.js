@@ -1,9 +1,6 @@
 /**
- * F-002: Phone audio capture → WebCodecs AudioEncoder → WebSocket
- *
- * Flow:
- *   getUserMedia → MediaStreamTrackProcessor → AudioData frames
- *   → AudioEncoder (opus) → EncodedAudioChunk → ws.send
+ * F-002/F-004: Phone audio capture → WebCodecs AudioEncoder → WebSocket
+ * F-004 additions: auto-reconnect, permission error handling, state display
  */
 
 const micBtn = document.getElementById('micBtn');
@@ -18,6 +15,37 @@ let chunkCount = 0;
 let byteCount = 0;
 let isRunning = false;
 
+// ── Reconnect ────────────────────────────────────────────────────
+
+let reconnectAttempts = 0;
+const MAX_RECONNECT = 10;
+let reconnectTimer = null;
+
+function backoffDelay(attempt) {
+  return Math.min(1000 * Math.pow(2, attempt), 30000);
+}
+
+function scheduleReconnect() {
+  if (reconnectAttempts >= MAX_RECONNECT) {
+    setStatus('Could not reconnect. Tap to retry.', 'error');
+    return;
+  }
+  const delay = backoffDelay(reconnectAttempts);
+  reconnectAttempts++;
+  setStatus(`Reconnecting in ${Math.round(delay / 1000)}s... (${reconnectAttempts}/${MAX_RECONNECT})`, 'error');
+  reconnectTimer = setTimeout(connectAndStream, delay);
+}
+
+function cancelReconnect() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  reconnectAttempts = 0;
+}
+
+// ── Main flow ────────────────────────────────────────────────────
+
 micBtn.addEventListener('click', () => {
   if (isRunning) {
     stop();
@@ -27,10 +55,12 @@ micBtn.addEventListener('click', () => {
 });
 
 async function start() {
+  cancelReconnect();
+
   try {
     setStatus('Requesting microphone...', '');
 
-    // 1. Get mic (mono, with defaults for echo/noise)
+    // 1. Get mic
     stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
@@ -39,14 +69,28 @@ async function start() {
       },
     });
 
+    // 2. Connect WebSocket + setup encoder, then stream
+    await connectAndStream();
+  } catch (err) {
+    handleStartError(err);
+  }
+}
+
+async function connectAndStream() {
+  // Clean up any previous encoder/ws before reconnect
+  cleanupEncoder();
+
+  try {
     setStatus('Connecting to server...', '');
 
-    // 2. Connect WebSocket (same host/port as page, HTTPS upgrade)
     ws = new WebSocket(`wss://${location.host}`);
+    ws.binaryType = 'arraybuffer';
 
     await new Promise((resolve, reject) => {
       ws.onopen = resolve;
       ws.onerror = () => reject(new Error('WebSocket connection failed'));
+      // Timeout after 10s
+      setTimeout(() => reject(new Error('Connection timed out')), 10000);
     });
 
     ws.onmessage = (event) => {
@@ -54,7 +98,8 @@ async function start() {
         try {
           const msg = JSON.parse(event.data);
           if (msg.type === 'state') {
-            setStatus(`Server: ${msg.state}`, msg.state === 'error' ? 'error' : 'connected');
+            const label = msg.state === 'error' ? 'error' : 'connected';
+            setStatus(`Server: ${msg.state}`, label);
           }
         } catch { /* ignore */ }
       }
@@ -63,29 +108,29 @@ async function start() {
     ws.onclose = () => {
       if (isRunning) {
         setStatus('Connection lost', 'error');
-        stop();
+        scheduleReconnect();
       }
+    };
+
+    ws.onerror = () => {
+      // onclose will fire after this
     };
 
     setStatus('Starting audio encoder...', '');
 
-    // 3. Create AudioEncoder (opus)
+    // 3. Create AudioEncoder (opus) — re-create on every reconnect
     chunkCount = 0;
     byteCount = 0;
 
     encoder = new AudioEncoder({
       output: (chunk) => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
         const buf = new Uint8Array(chunk.byteLength);
         chunk.copyTo(buf);
         ws.send(buf);
-
         chunkCount++;
         byteCount += buf.length;
-
-        // Update stats every ~10 chunks to avoid layout thrashing
-        if (chunkCount % 10 === 0) {
-          updateStats();
-        }
+        if (chunkCount % 10 === 0) updateStats();
       },
       error: (e) => {
         console.error('AudioEncoder error:', e);
@@ -98,7 +143,7 @@ async function start() {
       codec: 'opus',
       sampleRate: 48000,
       numberOfChannels: 1,
-      bitrate: 32000, // good for speech
+      bitrate: 32000,
     });
 
     // 4. Wire up MediaStreamTrack → AudioData frames
@@ -107,28 +152,32 @@ async function start() {
     reader = processor.readable.getReader();
 
     isRunning = true;
+    reconnectAttempts = 0; // reset on successful connection
     micBtn.textContent = 'Stop';
     micBtn.className = 'mic-off';
     setStatus('Streaming...', 'connected');
     updateStats();
 
-    // 5. Read loop (runs until canceled)
+    // 5. Read loop
     readLoop();
   } catch (err) {
-    console.error('start() failed:', err);
-    setStatus(`Error: ${err.message}`, 'error');
-    stop();
+    console.error('connectAndStream() failed:', err);
+    if (isRunning) {
+      setStatus(`Error: ${err.message}`, 'error');
+      scheduleReconnect();
+    }
   }
 }
 
 async function readLoop() {
   try {
-    while (isRunning) {
+    while (isRunning && reader) {
       const { value, done } = await reader.read();
       if (done) break;
-
-      encoder.encode(value);
-      value.close(); // free AudioData memory
+      if (encoder && encoder.state === 'configured') {
+        encoder.encode(value);
+      }
+      value.close();
     }
   } catch (err) {
     if (err.name !== 'AbortError') {
@@ -138,17 +187,41 @@ async function readLoop() {
   }
 }
 
+// ── Error handling ──────────────────────────────────────────────
+
+function handleStartError(err) {
+  console.error('start() failed:', err);
+
+  if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+    setStatus(
+      'Microphone permission denied. Open Chrome settings → Privacy → Camera & Microphone → allow mic.',
+      'error'
+    );
+  } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+    setStatus(
+      'No microphone found. Make sure your device has a built-in mic or an external one plugged in.',
+      'error'
+    );
+  } else if (err.name === 'NotReadableError') {
+    setStatus(
+      'Microphone is in use by another app. Close other apps that are using the mic.',
+      'error'
+    );
+  } else {
+    setStatus(`Error: ${err.message}`, 'error');
+  }
+
+  stop();
+}
+
+// ── Stop ────────────────────────────────────────────────────────
+
 function stop() {
   isRunning = false;
+  cancelReconnect();
 
-  if (reader) {
-    try { reader.cancel(); } catch (_) { /* ignore */ }
-    reader = null;
-  }
-  if (encoder) {
-    try { encoder.close(); } catch (_) { /* ignore */ }
-    encoder = null;
-  }
+  cleanupEncoder();
+
   if (stream) {
     stream.getTracks().forEach((t) => t.stop());
     stream = null;
@@ -168,6 +241,19 @@ function stop() {
   }
   statsEl.textContent = '';
 }
+
+function cleanupEncoder() {
+  if (reader) {
+    try { reader.cancel(); } catch (_) { /* ignore */ }
+    reader = null;
+  }
+  if (encoder) {
+    try { encoder.close(); } catch (_) { /* ignore */ }
+    encoder = null;
+  }
+}
+
+// ── UI helpers ──────────────────────────────────────────────────
 
 function setStatus(msg, className) {
   statusEl.textContent = msg;
