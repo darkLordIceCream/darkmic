@@ -191,9 +191,12 @@ async function connectAndStream() {
     updateStats();
 
     latencyMs = 0;
+    console.log('Ping timer started, ws state:', ws?.readyState);
     pingTimer = setInterval(() => {
       if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'ping', t: Date.now() }));
+        const pingMsg = JSON.stringify({ type: 'ping', t: Date.now() });
+        ws.send(pingMsg);
+        console.log('Ping sent:', pingMsg);
       }
     }, 2000);
 
