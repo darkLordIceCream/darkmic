@@ -80,6 +80,16 @@
 
 1. **F-008**: Launcher UX + installer | 启动体验 + 安装程序
 
+## Known Bugs | 已知 Bug
+
+### BUG-001: exe 模式下 uptime 不停止 + 音频不通
+
+- **日期**: 2026-05-17
+- **现象**: 双击打包好的 darkmic.exe 运行后，手机连接、点停止，uptime 持续计时不停止，PC 端也获取不到音频信息。但 `pnpm run dev` 本地开发模式下一切正常。
+- **影响范围**: pkg 打包后的 exe
+- **可能方向**: pkg 打包后环境变量 `AUDIO_PIPE_MODE` 默认值可能走不到 wasapi 路径，或 pkg 环境下 WebSocket/broadcast 行为与 dev 模式有差异
+- **状态**: `open`
+
 ## Blockers / Risks | 阻塞项 / 风险
 
 - ~~**Git push blocked**~~ → Resolved: push from Windows PowerShell works | 推送问题已解决
