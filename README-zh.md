@@ -15,8 +15,8 @@
 </p>
 
 <p align="center">
-  <b>用安卓手机或 iPad 给你的 Windows 电脑做无线麦克风。</b><br>
-  <sub><i>只需 Chrome。 &nbsp;手机零安装。 &nbsp;不上云。</i></sub>
+  <b>用移动设备给你的 Windows 电脑做无线麦克风。</b><br>
+  <sub><i>只需 Chromium 内核浏览器。 &nbsp;设备零安装。 &nbsp;不上云。</i></sub>
 </p>
 
 <br>
@@ -26,7 +26,7 @@
   <img src="https://img.shields.io/github/last-commit/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=22c55e" alt="更新">
   <img src="https://img.shields.io/github/license/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=3b82f6" alt="许可">
   <br>
-  <img src="https://img.shields.io/badge/Chrome-333?style=flat-square&logo=googlechrome&logoColor=white" alt="Chrome">
+  <img src="https://img.shields.io/badge/Chromium-333?style=flat-square&logo=googlechrome&logoColor=white" alt="Chromium">
   <img src="https://img.shields.io/badge/Windows-333?style=flat-square&logo=windows&logoColor=white" alt="Windows">
   <img src="https://img.shields.io/badge/TypeScript-333?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/pnpm-333?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm">
@@ -56,7 +56,7 @@
 
 ```
                         ┌─────────────────────────────────────────────────┐
-                        │           📱 手机 / iPad (Chrome)                │
+                        │           📱 移动设备 (Chromium)                   │
                         │                                                 │
                         │   打开终端显示的网址                              │
                         │   点「Start Microphone」                         │
@@ -94,13 +94,13 @@
 
 | | |
 |---|---|
-| 📱 &nbsp;**手机零安装** | 只需 Chrome，不用装 App |
+| 📱 &nbsp;**设备零安装** | 只需 Chromium 内核浏览器，不用装 App |
 | 🔒 &nbsp;**纯局域网** | 不上云，数据不出家门 |
 | ⚡ &nbsp;**~80ms 低延迟** | WebCodecs AudioEncoder，跳过容器包装 |
 | 🔊 &nbsp;**Opus 32kbps** | 人声优化，带宽友好 |
 | 🔌 &nbsp;**VB-Cable 输出** | 系统级虚拟麦克风 |
 | 📦 &nbsp;**单文件 .exe** | pkg 打包，FFmpeg 内置 |
-| 🖥️ &nbsp;**Windows 10/11** | 支持安卓手机和 iPad |
+| 🖥️ &nbsp;**Windows 10/11** | 任何有 Chromium 内核浏览器的移动设备 |
 | 🌐 &nbsp;**二维码连接** | PC 仪表盘扫码即可连接手机 |
 
 </div>
@@ -118,7 +118,7 @@ winget install OpenSSL.Light
 ```
 
 > [!IMPORTANT]
-> 还需安装 [VB-Cable](https://vb-audio.com/Cable/)（虚拟声卡驱动）。手机和电脑都装 Chrome，连同一个 WiFi。
+> 还需安装 [VB-Cable](https://vb-audio.com/Cable/)（虚拟声卡驱动）。移动设备和电脑都装 Chromium 内核浏览器（Chrome、Edge、Brave 等），连同一个 WiFi。
 
 **运行**
 
@@ -140,7 +140,7 @@ pnpm run dev
 
 <table>
 <tr><td>①</td><td>PC 打开 <b>https://localhost:3000</b> — 仪表盘显示二维码</td></tr>
-<tr><td>②</td><td>用<b>手机 Chrome</b> 扫描二维码，或手动输入 Phone 网址</td></tr>
+<tr><td>②</td><td>用<b>移动设备浏览器</b> 扫描二维码，或手动输入 Phone 网址</td></tr>
 <tr><td>③</td><td>点<b>「高级 → 继续前往」</b>（自签名证书 — <a href="#-常见问题">正常现象</a>）</td></tr>
 <tr><td>④</td><td>点<b>「Start Microphone」</b> → 允许麦克风权限</td></tr>
 <tr><td>⑤</td><td>说话 — 音频实时输出到电脑的 VB-Cable 虚拟麦克风</td></tr>
@@ -229,7 +229,7 @@ pnpm test:audio -- wasapi   # 音频管线测试 → VB-Cable 输出
 <details>
 <summary><b>可以用 Safari 或 Firefox 吗？</b></summary>
 <br>
-不行。本项目<b>仅支持 Chrome</b>，使用了 WebCodecs <code>AudioEncoder</code> API，只有 Chrome 完整支持。
+不行。本项目需要 <b>Chromium 内核浏览器</b>（Chrome、Edge、Brave、Opera 等），使用了 WebCodecs <code>AudioEncoder</code> API，只有 Chromium 内核实现了。
 </details>
 
 <br>

@@ -145,7 +145,7 @@ wss.on('connection', (ws) => {
 
   ws.on('message', (data) => {
     if (Buffer.isBuffer(data)) {
-      // First binary message = phone client → create audio pipe on demand
+      // First binary message = mobile client → create audio pipe on demand
       if (!audioPipe) {
         audioPipe = ensureAudioPipe();
         if (!audioPipe) return;
@@ -194,7 +194,7 @@ server.listen(port, '0.0.0.0', () => {
   }
 
   console.log('');
-  console.log('  First time? Accept the self-signed cert warning in Chrome.');
+  console.log('  First time? Accept the self-signed cert warning in your browser.');
   console.log('');
 
   if (process.platform === 'win32') {

@@ -97,7 +97,7 @@
 - **Node.js retained vs Rust**: Node.js is sufficient for I/O-bound audio pipeline.
 - **Windows-first (VB-Cable)**: macOS not supported.
 - **packaging via pkg**: Standalone .exe via @yao-pkg/pkg.
-- **Chrome-only**: No cross-browser testing.
+- **Chromium-only**: No cross-browser testing beyond Chromium-based browsers (Chrome, Edge, Brave, etc.).
 - **No TURN/STUN**: Local network only.
 - **pnpm**: Package manager.
 - **F-004 PC management page**: `/` serves `pc.html` (management UI with QR code + log panel), `/phone` serves `index.html` (phone client). QR code generated client-side via `qrcode` npm package. PC page connects to same WebSocket for state/log push. | PC 管理页：`/` 提供管理界面，`/phone` 提供手机端，二维码通过 qrcode 包在浏览器端生成，PC 页通过同一 WebSocket 接收状态推送。
@@ -125,7 +125,7 @@
 - [x] State callbacks: started → stopped lifecycle confirmed | 状态回调验证通过
 - [x] Auto-restart: spawnFfplay, max restarts=3, restarting/error state transitions | 自动重启已实现
 - [x] `openssl` dependency documented in README prerequisites | OpenSSL 依赖已文档化
-- [x] E2E phone → PC audio: real phone Chrome → VB-Cable verified | 手机端到端真实验证通过
+- [x] E2E phone → PC audio: real mobile device (Chromium) → VB-Cable verified | 手机端到端真实验证通过
 - [ ] Push to remote: HTTPS auth blocked in WSL | 推送到远端受阻
 
 ## Notes for Next Session | 下次会话备注

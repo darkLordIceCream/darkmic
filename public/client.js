@@ -1,5 +1,5 @@
 /**
- * F-002/F-004: Phone audio capture → WebCodecs AudioEncoder → WebSocket
+ * F-002/F-004: Mobile audio capture → WebCodecs AudioEncoder → WebSocket
  * F-004 additions: auto-reconnect, permission error handling, state display
  */
 
@@ -195,7 +195,7 @@ function handleStartError(err) {
 
   if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
     setStatus(
-      'Microphone permission denied. Open Chrome settings → Privacy → Camera & Microphone → allow mic.',
+      'Microphone permission denied. Open browser settings → Privacy → Camera & Microphone → allow mic.',
       'error'
     );
   } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {

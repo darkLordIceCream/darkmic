@@ -15,8 +15,8 @@
 </p>
 
 <p align="center">
-  <b>Turn your Android phone or iPad into a Windows PC microphone.</b><br>
-  <sub><i>Chrome browser only. &nbsp;Zero install on phone. &nbsp;No cloud.</i></sub>
+  <b>Turn your mobile device into a Windows PC microphone.</b><br>
+  <sub><i>Chromium-based browser only. &nbsp;Zero install on device. &nbsp;No cloud.</i></sub>
 </p>
 
 <br>
@@ -26,7 +26,7 @@
   <img src="https://img.shields.io/github/last-commit/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=22c55e" alt="updated">
   <img src="https://img.shields.io/github/license/darkLordIceCream/darkmic?style=flat-square&labelColor=1a1a1a&color=3b82f6" alt="license">
   <br>
-  <img src="https://img.shields.io/badge/Chrome-333?style=flat-square&logo=googlechrome&logoColor=white" alt="Chrome">
+  <img src="https://img.shields.io/badge/Chromium-333?style=flat-square&logo=googlechrome&logoColor=white" alt="Chromium">
   <img src="https://img.shields.io/badge/Windows-333?style=flat-square&logo=windows&logoColor=white" alt="Windows">
   <img src="https://img.shields.io/badge/TypeScript-333?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/pnpm-333?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm">
@@ -56,7 +56,7 @@
 
 ```
                         ┌─────────────────────────────────────────────────┐
-                        │            📱 PHONE / IPAD (Chrome)             │
+                        │          📱 MOBILE DEVICE (Chromium)              │
                         │                                                 │
                         │   Open URL from terminal                         │
                         │   Tap "Start Microphone"                         │
@@ -94,13 +94,13 @@
 
 | | |
 |---|---|
-| 📱 &nbsp;**Zero install** on phone | Just Chrome — no app store needed |
+| 📱 &nbsp;**Zero install** on device | Just a Chromium browser — no app store needed |
 | 🔒 &nbsp;**Local network only** | No cloud, no data leaves your home |
 | ⚡ &nbsp;**~80ms latency** | WebCodecs AudioEncoder skips container overhead |
 | 🔊 &nbsp;**Opus 32kbps** | Optimized for speech, efficient bandwidth |
 | 🔌 &nbsp;**VB-Cable output** | System-level virtual microphone device |
 | 📦 &nbsp;**Single .exe** | Packaged via pkg, FFmpeg bundled alongside |
-| 🖥️ &nbsp;**Windows 10/11** | Android phone & iPad supported |
+| 🖥️ &nbsp;**Windows 10/11** | Any mobile device with Chromium browser |
 | 🌐 &nbsp;**QR connect** | Scan QR on PC dashboard to connect phone |
 
 </div>
@@ -118,7 +118,7 @@ winget install OpenSSL.Light
 ```
 
 > [!IMPORTANT]
-> Also required: [VB-Cable](https://vb-audio.com/Cable/) (virtual audio driver) and [Chrome](https://www.google.com/chrome/) on both PC and phone. Both devices on the same WiFi.
+> Also required: [VB-Cable](https://vb-audio.com/Cable/) (virtual audio driver) and a Chromium-based browser ([Chrome](https://www.google.com/chrome/), Edge, Brave, etc.) on both PC and mobile. Both devices on the same WiFi.
 
 **Run**
 
@@ -140,7 +140,7 @@ The terminal shows your LAN IPs:
 
 <table>
 <tr><td>①</td><td>Open <b>https://localhost:3000</b> on your PC — the dashboard appears with a QR code</td></tr>
-<tr><td>②</td><td>Scan the QR code with <b>phone's Chrome</b>, or open the Phone URL manually</td></tr>
+<tr><td>②</td><td>Scan the QR code with your <b>mobile device's browser</b>, or open the Phone URL manually</td></tr>
 <tr><td>③</td><td>Tap <b>Advanced → Proceed</b> (self-signed cert — <a href="#-faq">expected</a>)</td></tr>
 <tr><td>④</td><td>Tap <b>"Start Microphone"</b> → allow mic permission</td></tr>
 <tr><td>⑤</td><td>Speak — audio streams to your PC's VB-Cable virtual microphone</td></tr>
@@ -229,7 +229,7 @@ The server generates a self‑signed SSL certificate on first run. Chrome warns 
 <details>
 <summary><b>Can I use Safari or Firefox?</b></summary>
 <br>
-No. This project targets <b>Chrome only</b> on both phone and PC. It uses WebCodecs <code>AudioEncoder</code> which has full support in Chrome.
+No. This project requires a <b>Chromium-based browser</b> (Chrome, Edge, Brave, Opera, etc.) on both mobile and PC. It uses WebCodecs <code>AudioEncoder</code> which is only implemented in Chromium.
 </details>
 
 <br>

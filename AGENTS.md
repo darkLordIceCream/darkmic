@@ -4,20 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) and other AI coding 
 
 > 本文档为 AI 编码代理（Claude Code 等）提供项目指导，替代通常的 CLAUDE.md。
 
-Phone-as-microphone for PC via Chrome browser. Phone captures mic audio via `getUserMedia` → streams over local network → PC receives and pipes to virtual audio device (VB-Cable).
+Phone-as-microphone for PC via Chromium-based browser. Mobile device captures mic audio via `getUserMedia` → streams over local network → PC receives and pipes to virtual audio device (VB-Cable).
 
-> 手机做电脑麦克风。手机/ iPad Chrome 采集麦克风音频 → 局域网传输 → Windows 电脑接收并输出到虚拟声卡 (VB-Cable)。
+> 手机做电脑麦克风。移动设备 Chromium 内核浏览器采集麦克风音频 → 局域网传输 → Windows 电脑接收并输出到虚拟声卡 (VB-Cable)。
 
 ## Architecture | 架构
 
 ### How it works — 工作方式
 
-PC runs a Node.js server (the "app"). Phone opens the server's page in Chrome browser. Audio flows one-way: phone → PC.
+PC runs a Node.js server (the "app"). Mobile device opens the server's page in a Chromium-based browser. Audio flows one-way: mobile → PC.
 
-> PC 运行 Node.js 服务端（即"应用本身"），手机用 Chrome 浏览器打开服务器页面，音频单向从手机流到电脑。
+> PC 运行 Node.js 服务端（即"应用本身"），移动设备用 Chromium 内核浏览器打开服务器页面，音频单向从手机流到电脑。
 
 ```
-Phone / iPad (Chrome)                  Windows PC (darkmic.exe)
+Mobile device (Chromium)               Windows PC (darkmic.exe)
 ┌──────────────────────┐            ┌──────────────────────────────┐
 │ /phone                │   HTTPS   │  Node.js Server              │
 │ getUserMedia          │  ◄────── │  → /      → pc.html (仪表盘)   │
@@ -98,7 +98,7 @@ darkmic/
 
 ## Constraints | 约束
 
-- **Chrome-only** (Android phone, iPad, Windows PC). No other browser testing needed. | 仅支持 Chrome（安卓手机 / iPad / Windows），不做跨浏览器兼容
+- **Chromium-based browsers only** (Chrome, Edge, Brave, Opera, etc.) on both mobile and PC. No Firefox/Safari. | 仅支持 Chromium 内核浏览器（Chrome/Edge/Brave/Opera 等），不支持 Firefox/Safari
 - **Local network only** — same subnet, no STUN/TURN. | 仅局域网，不处理 NAT 穿透
 - **HTTPS required** — self-signed certs auto-generated via openssl. | 必须 HTTPS，自签名证书自动生成
 - **Windows + VB-Cable**. macOS not supported. | Windows 平台 + VB-Cable 虚拟声卡，不支持 macOS
@@ -120,8 +120,8 @@ If baseline verification fails, repair it first before adding new scope.
 
 - **One feature at a time** — pick exactly one unfinished feature from `feature_list.json`
   > 一次只做一个功能，从 feature_list.json 中挑选一个未完成的
-- **Chrome-only** — don't add polyfills or cross-browser workarounds unless explicitly requested
-  > 仅支持 Chrome，除非明确要求否则不添加 polyfill
+- **Chromium-only** — don't add polyfills or cross-browser workarounds unless explicitly requested
+  > 仅支持 Chromium 内核浏览器，除非明确要求否则不添加 polyfill
 - **No backend streaming infrastructure** — no TURN/STUN servers, no cloud relay, no SFU
   > 不使用任何后端流媒体基础设施（TURN/STUN/云中继/SFU）
 - **Verification required** — don't claim done without running verification
@@ -176,12 +176,12 @@ pnpm test:audio -- wasapi   # Audio test with VB-Cable output (Windows only) | V
 - `AudioPipe` is created lazily on the first binary WebSocket message (dashboard connections don't trigger it). Maintained per-connection via `ensureAudioPipe()`.
 - `AudioPipe.close()`: wasapi mode calls `waveOutReset` + `waveOutClose` after 500ms delay; ffplay mode sends SIGTERM after 300ms delay; file mode calls `stream.end()` immediately. All modes call `decoder.delete()` after output cleanup.
 - Certificates auto-generated to `certs/` (gitignored) via openssl on first run. Requires openssl on PATH.
-- The server binds `0.0.0.0` so phones on the same LAN can reach it. Port defaults to 3000 (`PORT` env var).
+- The server binds `0.0.0.0` so mobile devices on the same LAN can reach it. Port defaults to 3000 (`PORT` env var).
 - `getLanUrl()` filters virtual adapters by name regex, prefers private LAN IPs (192.168/10/172.16-31), falls back to any non-internal address.
 - `broadcast()` sends JSON messages (state/stats/url) to ALL connected WebSocket clients — both dashboard and phone receive updates.
 
 ## Escalation | 升级处理
 
 - **Architecture decisions** — ask user before diverging from plan | 架构变更先询问用户
-- **Cross-browser issues** — skip: Chrome-only project | 跨浏览器问题跳过
+- **Cross-browser issues** — skip: Chromium-only project | 跨浏览器问题跳过
 - **Repeat failures** — log in progress.md, flag for review | 反复失败记录到 progress.md，标记待审查
