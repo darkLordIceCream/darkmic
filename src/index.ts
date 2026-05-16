@@ -12,8 +12,6 @@ const app = express();
 const server = createServer({ key: certs.key, cert: certs.cert }, app);
 const wss = new WebSocketServer({ server, maxPayload: 100 * 1024 });
 
-app.use(express.static('public'));
-
 const port = parseInt(process.env.PORT || '3000', 10);
 
 const audioMode = (process.env.AUDIO_PIPE_MODE || 'file') as AudioPipeMode;
@@ -23,7 +21,7 @@ if (audioMode !== 'file') {
   console.log(`  (set AUDIO_PIPE_MODE=file for safe logging only)`);
 }
 
-// ── Routing ────────────────────────────────────────────────────────
+// ── Routing (before static to take priority) ───────────────────────
 
 app.get('/', (_req, res) => {
   res.sendFile('pc.html', { root: 'public' });
@@ -32,6 +30,20 @@ app.get('/', (_req, res) => {
 app.get('/phone', (_req, res) => {
   res.sendFile('index.html', { root: 'public' });
 });
+
+// ── LAN URL ────────────────────────────────────────────────────────
+
+function getLanUrl(): string | null {
+  const ifaces = networkInterfaces();
+  for (const name of Object.keys(ifaces)) {
+    for (const iface of ifaces[name] ?? []) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return `https://${iface.address}:${port}/phone`;
+      }
+    }
+  }
+  return null;
+}
 
 // ── QR code endpoint ───────────────────────────────────────────────
 
@@ -49,19 +61,8 @@ app.get('/api/qr', async (_req, res) => {
   }
 });
 
-// ── LAN URL ────────────────────────────────────────────────────────
-
-function getLanUrl(): string | null {
-  const ifaces = networkInterfaces();
-  for (const name of Object.keys(ifaces)) {
-    for (const iface of ifaces[name] ?? []) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        return `https://${iface.address}:${port}/phone`;
-      }
-    }
-  }
-  return null;
-}
+// Static files (after routes — fallback for /client.js, etc.)
+app.use(express.static('public'));
 
 // ── WebSocket broadcast ────────────────────────────────────────────
 
