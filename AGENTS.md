@@ -17,29 +17,30 @@ PC runs a Node.js server (the "app"). Phone opens the server's page in Chrome br
 > PC 运行 Node.js 服务端（即"应用本身"），手机用 Chrome 浏览器打开服务器页面，音频单向从手机流到电脑。
 
 ```
-Phone / iPad (Chrome)                 Windows PC (darkmic.exe)
-┌─────────────────────┐             ┌────────────────────────────┐
-│ 打开服务器页面        │   HTTPS    │  Node.js Server            │
-│ getUserMedia         │  ◄─────── │  → 提供手机端页面            │
-│ → MediaStreamTrack   │             │  → 提供 PC 状态页 (二维码)   │
-│ → AudioEncoder(opus) │   WS       │  → WebSocket 接收编码数据    │
-│ → ws.send(chunk)     │  ───────► │  → opusscript 解码 opus → PCM │
-│                      │            │  → pipe → VB-Cable 虚拟声卡  │
-└─────────────────────┘             └────────────────────────────┘
-                                           ↑
-                                     PC 浏览器打开
-                                   localhost:3000 看状态
+Phone / iPad (Chrome)                  Windows PC (darkmic.exe)
+┌──────────────────────┐            ┌──────────────────────────────┐
+│ /phone                │   HTTPS   │  Node.js Server              │
+│ getUserMedia          │  ◄────── │  → /      → pc.html (仪表盘)   │
+│ → MediaStreamTrack    │           │  → /phone → index.html (手机端) │
+│ → AudioEncoder(Opus)  │   WS      │  → WebSocket 接收编码数据      │
+│ → ws.send(chunk)      │  ───────► │  → opusscript 解码 Opus → PCM │
+│                        │           │  → WinMM waveOut → VB-Cable  │
+└──────────────────────┘            └──────────────────────────────┘
+                                            ↑
+                                     PC 浏览器打开 / 看仪表盘
+                                     二维码 · 状态 · 指标 · 日志
 ```
 
 ### Phase 1 (current): WebCodecs AudioEncoder + WebSocket
 
-Phone uses `AudioEncoder` (WebCodecs API) to encode raw PCM → opus at ~10ms granularity. Server decodes opus → PCM via `opusscript` (pure JS), then pipes PCM to ffplay/FFmpeg for audio device output. ~80ms end-to-end latency expected.
+Phone uses `AudioEncoder` (WebCodecs API) to encode raw PCM → Opus at ~10ms granularity. Server decodes Opus → PCM via `opusscript` (pure JS), then pipes PCM via WinMM waveOut API to VB-Cable virtual audio device. ~80ms end-to-end latency expected.
 
-> Phase 1 使用 WebCodecs AudioEncoder 编码音频，服务端通过 opusscript 纯 JS 解码，跳过 MediaRecorder 的容器包装和内部缓冲，延迟约 80ms。
+> Phase 1 使用 WebCodecs AudioEncoder 编码音频，服务端通过 opusscript 纯 JS 解码，经 WinMM waveOut API 输出到 VB-Cable 虚拟声卡，延迟约 80ms。
 
 ```
-Phone:  getUserMedia → MediaStreamTrackProcessor → AudioEncoder(opus) → WebSocket
-PC:     WebSocket → opusscript decode → PCM → ffplay/FFmpeg → VB-Cable
+Phone:   getUserMedia → MediaStreamTrackProcessor → AudioEncoder(Opus) → WebSocket
+PC:      WebSocket → opusscript decode → PCM → WinMM waveOut → VB-Cable
+Dashboard: / → pc.html (QR code, real-time metrics, event log)
 ```
 
 ### Phase 2 (future): WebRTC P2P (if latency requires)
@@ -49,29 +50,38 @@ Same server infrastructure, swap transport: `RTCPeerConnection` instead of `Audi
 ## Source Code | 源代码
 
 ```
-public/               → Phone-facing web app (served statically by Express)
-  index.html            Minimal UI: start/stop button, connection status, stats
-  client.js             getUserMedia → MediaStreamTrackProcessor → AudioEncoder(opus) → WebSocket send
-                        AudioEncoder configured: opus, 48kHz, mono, 32kbps
+public/               → Web app pages (served by Express)
+  pc.html               PC dashboard: QR code, real-time metrics (throughput/chunks/uptime),
+                         status badge, event log panel. Connects to same WebSocket for live updates.
+  index.html            Phone UI: start/stop button, connection status, stats
+  client.js             getUserMedia → MediaStreamTrackProcessor → AudioEncoder(opus) → WebSocket send.
+                        Auto-reconnect (exponential backoff 1s→30s, max 10 attempts).
+                        Mic permission error handling (NotAllowed, NotFound, NotReadable).
 
 src/                  → PC server (Node.js + TypeScript, ES modules, NodeNext resolution)
   index.ts              HTTPS server (Express) + WebSocket server (ws).
-                        Per-connection: create AudioPipe(pipe mode), write chunks, pipe.close() on disconnect.
-                        Prints LAN IPs on startup. Binds 0.0.0.0 for LAN reachability.
+                        Route split: / → pc.html, /phone → index.html.
+                        /api/qr → server-side QR SVG generation.
+                        WebSocket: broadcast state/stats/url to all clients.
+                        Lazy AudioPipe: created on first binary message (dashboard doesn't trigger it).
+                        getLanUrl(): filters virtual adapters by name, prefers private LAN ranges.
+                        Auto-open browser on startup (windowsHide: true).
   cert.ts               Self-signed cert generation via openssl. Cached in certs/ (gitignored).
   audio.ts              AudioPipe factory with 3 modes (controlled by AUDIO_PIPE_MODE env var):
                           file   — writes framed raw opus to disk (default, safe)
                           ffplay — opusscript decode → PCM → ffplay stdin (speaker playback)
-                          wasapi — opusscript decode → PCM → WinMM waveOut → VB-Cable (Windows only, no FFmpeg)
+                          wasapi — opusscript decode → PCM → WinMM waveOut → VB-Cable (Windows only)
+  wasapi.ts             WinMM waveOut API via koffi (pure JS FFI). Device enumeration with truncated
+                         name matching (31-char WinMM limit). Buffer pool (6×4800 bytes).
 
 scripts/              → Dev utilities
   test-audio.ts         Audio pipeline test harness (3 modes)
   gen-sine-test.ts      Sine wave generator for E2E audio test
 ```
 
-**Decoding strategy | 解码方案**: `opusscript` (pure JS, no native deps) decodes opus → s16le PCM in-process. Output varies by mode: ffplay mode pipes PCM to ffplay stdin (speakers); wasapi mode writes PCM via WinMM waveOut API (`koffi` FFI) directly to VB-Cable (no FFmpeg needed). This avoids FFmpeg's missing raw opus demuxer and WASAPI muxer in Gyan/BtbN Windows builds.
+**Decoding strategy | 解码方案**: `opusscript` (pure JS, no native deps) decodes opus → s16le PCM in-process. Output varies by mode: wasapi mode writes PCM via WinMM waveOut API (`koffi` FFI) directly to VB-Cable (no FFmpeg needed); ffplay mode pipes PCM to ffplay stdin (speakers); file mode saves framed raw opus to disk for debugging. This avoids FFmpeg's missing raw opus demuxer and WASAPI muxer in Gyan/BtbN Windows builds.
 
-**Data flow | 数据流**: Browser `AudioEncoder` produces variable-length raw opus packets (no container) → WebSocket binary frames → `AudioPipe.write()` → opusscript decode to PCM → output via ffplay stdin (speakers) or WinMM waveOut (VB-Cable).
+**Data flow | 数据流**: Browser `AudioEncoder` produces variable-length raw opus packets (no container) → WebSocket binary frames → `AudioPipe.write()` → opusscript decode to PCM → output via WinMM waveOut (VB-Cable) or ffplay stdin (speakers) or file.
 
 ## Packaging | 打包
 
@@ -82,7 +92,6 @@ The server is compiled into a single Windows `.exe` via `pkg` (bundles Node.js r
 ```
 darkmic/
 ├── darkmic.exe         # pkg-compiled server (self-contained)
-├── ffmpeg.exe          # system dep bundled alongside
 ├── certs/              # generated on first run (self-signed)
 └── config.json         # port, quality, etc. (optional)
 ```
@@ -91,9 +100,9 @@ darkmic/
 
 - **Chrome-only** (Android phone, iPad, Windows PC). No other browser testing needed. | 仅支持 Chrome（安卓手机 / iPad / Windows），不做跨浏览器兼容
 - **Local network only** — same subnet, no STUN/TURN. | 仅局域网，不处理 NAT 穿透
-- **HTTPS required** — use `mkcert` for local dev certs. | 必须 HTTPS，本地用 `mkcert` 生成证书
+- **HTTPS required** — self-signed certs auto-generated via openssl. | 必须 HTTPS，自签名证书自动生成
 - **Windows + VB-Cable**. macOS not supported. | Windows 平台 + VB-Cable 虚拟声卡，不支持 macOS
-- **FFmpeg required** — bundled with the packaged app; on dev machine install via `winget install ffmpeg` or `choco install ffmpeg` | FFmpeg 为必需依赖，打包时内置；开发环境需单独安装
+- **FFmpeg not required** for default wasapi mode (WinMM handles output). ffplay mode and test scripts still need ffmpeg on PATH. | wasapi 模式不需要 FFmpeg（WinMM 直接输出），ffplay 模式和测试脚本需要
 
 ## Startup Workflow | 启动流程
 
@@ -164,9 +173,12 @@ pnpm test:audio -- wasapi   # Audio test with VB-Cable output (Windows only) | V
 ## Key Implementation Notes | 关键实现备注
 
 - The opusscript decoder (48kHz, mono) is instantiated once per WebSocket connection. Malformed opus packets are silently dropped.
-- `AudioPipe.close()`: ffplay mode sends SIGTERM after 300ms delay (stdin drain); wasapi mode calls `waveOutReset` + `waveOutClose` after 500ms delay; file mode calls `stream.end()` immediately. All modes call `decoder.delete()` after output cleanup.
+- `AudioPipe` is created lazily on the first binary WebSocket message (dashboard connections don't trigger it). Maintained per-connection via `ensureAudioPipe()`.
+- `AudioPipe.close()`: wasapi mode calls `waveOutReset` + `waveOutClose` after 500ms delay; ffplay mode sends SIGTERM after 300ms delay; file mode calls `stream.end()` immediately. All modes call `decoder.delete()` after output cleanup.
 - Certificates auto-generated to `certs/` (gitignored) via openssl on first run. Requires openssl on PATH.
 - The server binds `0.0.0.0` so phones on the same LAN can reach it. Port defaults to 3000 (`PORT` env var).
+- `getLanUrl()` filters virtual adapters by name regex, prefers private LAN IPs (192.168/10/172.16-31), falls back to any non-internal address.
+- `broadcast()` sends JSON messages (state/stats/url) to ALL connected WebSocket clients — both dashboard and phone receive updates.
 
 ## Escalation | 升级处理
 
