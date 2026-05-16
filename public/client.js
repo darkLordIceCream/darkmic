@@ -14,6 +14,8 @@ let reader = null;
 let chunkCount = 0;
 let byteCount = 0;
 let isRunning = false;
+let audioCtx = null;
+let rawStream = null;
 
 // ── Reconnect ────────────────────────────────────────────────────
 
@@ -62,13 +64,27 @@ async function start() {
     setStatus('Requesting microphone...', '');
 
     // 1. Get mic
-    stream = await navigator.mediaDevices.getUserMedia({
+    rawStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
         echoCancellation: true,
         noiseSuppression: true,
       },
     });
+
+    // 1b. AGC via DynamicsCompressorNode — smooth volume before encoding
+    audioCtx = new AudioContext({ sampleRate: 48000 });
+    const source = audioCtx.createMediaStreamSource(rawStream);
+    const comp = audioCtx.createDynamicsCompressor();
+    comp.threshold.value = -50;
+    comp.knee.value = 20;
+    comp.ratio.value = 12;
+    comp.attack.value = 0.003;
+    comp.release.value = 0.25;
+    source.connect(comp);
+    const dest = audioCtx.createMediaStreamDestination();
+    comp.connect(dest);
+    stream = dest.stream;
 
     // 2. Connect WebSocket + setup encoder, then stream
     await connectAndStream();
@@ -226,6 +242,14 @@ function stop() {
   if (stream) {
     stream.getTracks().forEach((t) => t.stop());
     stream = null;
+  }
+  if (rawStream) {
+    rawStream.getTracks().forEach((t) => t.stop());
+    rawStream = null;
+  }
+  if (audioCtx) {
+    audioCtx.close();
+    audioCtx = null;
   }
   if (ws) {
     ws.onopen = null;
