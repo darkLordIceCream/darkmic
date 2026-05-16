@@ -33,16 +33,44 @@ app.get('/phone', (_req, res) => {
 
 // ── LAN URL ────────────────────────────────────────────────────────
 
+// Virtual adapter name patterns to exclude (case-insensitive)
+const VIRTUAL_IFACE = /^(utun|docker|veth|br-|vEthernet|Hyper-V|VirtualBox|VMware|tun|tap|teredo|isatap|Loopback|Wintun)/i;
+
 function getLanUrl(): string | null {
   const ifaces = networkInterfaces();
+  const candidates: { name: string; addr: string }[] = [];
+
   for (const name of Object.keys(ifaces)) {
+    if (VIRTUAL_IFACE.test(name)) continue;
     for (const iface of ifaces[name] ?? []) {
       if (iface.family === 'IPv4' && !iface.internal) {
-        return `https://${iface.address}:${port}/phone`;
+        candidates.push({ name, addr: iface.address });
       }
     }
   }
+
+  // Prefer real private LAN ranges; return the first match
+  for (const c of candidates) {
+    if (isPrivateLan(c.addr)) return `https://${c.addr}:${port}/phone`;
+  }
+
+  // Fall back to any non-internal address
+  if (candidates.length > 0) {
+    return `https://${candidates[0].addr}:${port}/phone`;
+  }
+
   return null;
+}
+
+function isPrivateLan(addr: string): boolean {
+  const [a, b] = addr.split('.').map(Number);
+  // 192.168.x.x
+  if (a === 192 && b === 168) return true;
+  // 10.x.x.x
+  if (a === 10) return true;
+  // 172.16.x.x – 172.31.x.x
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  return false;
 }
 
 // ── QR code endpoint ───────────────────────────────────────────────
@@ -170,7 +198,7 @@ server.listen(port, '0.0.0.0', () => {
   console.log('');
 
   if (process.platform === 'win32') {
-    exec(`start ${localUrl}`);
+    exec(`start ${localUrl}`, { windowsHide: true });
   } else if (process.platform === 'darwin') {
     exec(`open ${localUrl}`);
   } else {

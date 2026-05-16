@@ -344,7 +344,6 @@ function log(msg, cls = '') {
 const statusBadge = document.getElementById('status-badge');
 const statusText = document.getElementById('status-text');
 function setStatus(state) {
-  statusBadge.className = 'status-badge ' + state;
   const map = { idle: 'idle', connected: 'active', started: 'active', restarting: 'active', error: 'error', stopped: 'idle' };
   statusBadge.className = 'status-badge ' + (map[state] || 'idle');
   statusText.textContent = state;

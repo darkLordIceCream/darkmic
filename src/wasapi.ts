@@ -134,7 +134,7 @@ export function createWasapiOutput(deviceName: string): WasapiOutput | null {
   const wfx = createPcmFormat(48000, 1, 16);
 
   const hWaveOutBuf = Buffer.alloc(8);
-  const result = waveOutOpen(hWaveOutBuf, 0xffffffff, wfx, 0, 0, CALLBACK_NULL);
+  const result = waveOutOpen(hWaveOutBuf, found.id, wfx, 0, 0, CALLBACK_NULL);
   if (result !== MMSYSERR_NOERROR) {
     console.error(`[WasapiOutput] waveOutOpen failed: ${result}`);
     return null;

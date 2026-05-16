@@ -28,6 +28,7 @@ function backoffDelay(attempt) {
 function scheduleReconnect() {
   if (reconnectAttempts >= MAX_RECONNECT) {
     setStatus('Could not reconnect. Tap to retry.', 'error');
+    stop();
     return;
   }
   const delay = backoffDelay(reconnectAttempts);
