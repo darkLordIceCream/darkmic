@@ -156,7 +156,7 @@
   /* ── Metrics row ─────────────────────────────────── */
   .metrics {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1px;
     background: var(--border);
     border: 1px solid var(--border);
@@ -263,7 +263,7 @@
       align-items: center;
     }
     .qr-panel { width: 100%; max-width: 300px; }
-    .metrics { grid-template-columns: repeat(3, 1fr); }
+    .metrics { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
 </head>
@@ -306,6 +306,11 @@
         <div class="metric-label">Uptime</div>
         <div class="metric-value live" id="metric-uptime">00:00</div>
         <div class="metric-unit">since start</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Latency</div>
+        <div class="metric-value live" id="metric-latency">—</div>
+        <div class="metric-unit">one-way ms</div>
       </div>
     </div>
 
@@ -354,6 +359,7 @@ function setStatus(state) {
 const metricBytes = document.getElementById('metric-bytes');
 const metricChunks = document.getElementById('metric-chunks');
 const metricUptime = document.getElementById('metric-uptime');
+const metricLatency = document.getElementById('metric-latency');
 let totalBytes = 0;
 let totalChunks = 0;
 let startTime = null;
@@ -405,6 +411,9 @@ ws.onmessage = (event) => {
         metricBytes.textContent = formatBytes(totalBytes);
         metricChunks.textContent = totalChunks.toString();
         if (!startTime) startTime = Date.now();
+        break;
+      case 'latency':
+        metricLatency.textContent = msg.ms.toString();
         break;
     }
   } catch {}

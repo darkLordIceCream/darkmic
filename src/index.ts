@@ -158,6 +158,16 @@ wss.on('connection', (ws) => {
         `Chunk #${chunkCount}: ${data.length} bytes (total ${totalBytes})`,
       );
       broadcast({ type: 'stats', bytes: totalBytes, chunks: chunkCount });
+    } else if (typeof data === 'string') {
+      // Text messages: ping/pong relay for latency measurement
+      try {
+        const msg = JSON.parse(data);
+        if (msg.type === 'ping') {
+          ws.send(JSON.stringify({ type: 'pong', t: msg.t }));
+        } else if (msg.type === 'latency') {
+          broadcast({ type: 'latency', ms: msg.ms });
+        }
+      } catch { /* ignore malformed JSON */ }
     }
   });
 

@@ -16,6 +16,8 @@ let byteCount = 0;
 let isRunning = false;
 let audioCtx = null;
 let rawStream = null;
+let pingTimer = null;
+let latencyMs = 0;
 
 // ── Reconnect ────────────────────────────────────────────────────
 
@@ -117,6 +119,12 @@ async function connectAndStream() {
           if (msg.type === 'state') {
             const label = msg.state === 'error' ? 'error' : 'connected';
             setStatus(`Server: ${msg.state}`, label);
+          } else if (msg.type === 'pong') {
+            latencyMs = Date.now() - msg.t;
+            updateStats();
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'latency', ms: Math.round(latencyMs / 2) }));
+            }
           }
         } catch { /* ignore */ }
       }
@@ -174,6 +182,13 @@ async function connectAndStream() {
     micBtn.className = 'mic-off';
     setStatus('Streaming...', 'connected');
     updateStats();
+
+    latencyMs = 0;
+    pingTimer = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping', t: Date.now() }));
+      }
+    }, 2000);
 
     // 5. Read loop
     readLoop();
@@ -237,6 +252,11 @@ function stop() {
   isRunning = false;
   cancelReconnect();
 
+  if (pingTimer) {
+    clearInterval(pingTimer);
+    pingTimer = null;
+  }
+
   cleanupEncoder();
 
   if (stream) {
@@ -287,5 +307,9 @@ function setStatus(msg, className) {
 
 function updateStats() {
   const kb = (byteCount / 1024).toFixed(1);
-  statsEl.textContent = `${chunkCount} chunks · ${kb} KB sent`;
+  let text = `${chunkCount} chunks · ${kb} KB sent`;
+  if (latencyMs > 0) {
+    text += ` · ${Math.round(latencyMs / 2)}ms one-way`;
+  }
+  statsEl.textContent = text;
 }
