@@ -165,7 +165,6 @@ wss.on('connection', (ws) => {
         if (msg.type === 'ping') {
           ws.send(JSON.stringify({ type: 'pong', t: msg.t }));
         } else if (msg.type === 'latency') {
-          console.log(`Latency: ${msg.ms}ms one-way`);
           broadcast({ type: 'latency', ms: msg.ms });
         }
       } catch { /* ignore malformed JSON */ }
