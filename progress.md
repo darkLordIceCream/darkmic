@@ -58,12 +58,13 @@
   - WASAPI: targets VB-Cable by device ID (not WAVE_MAPPER)
   - E2E verified: phone → PC → VB-Cable audio flow works
 
-### What's In Progress | 进行中
+### What's Done — Continued | 已完成（续）
 
-- [ ] **F-005**: AGC + quality selector + latency measurement | 自动增益 + 音质切换 + 延迟测量
-  - Browser-side AGC via Web Audio API `DynamicsCompressorNode`
-  - Voice/music toggle (32kbps / 64kbps Opus)
-  - E2E latency measurement (timestamp round-trip), display on dashboard
+- [x] **F-005**: AGC + adaptive bitrate + latency measurement | 自动增益 + 自适应码率 + 延迟测量
+  - AGC: DynamicsCompressorNode (-50dB/12:1/3ms) between getUserMedia and AudioEncoder
+  - Adaptive bitrate: one-way <50ms → 64kbps, >=50ms → 32kbps (5s debounce)
+  - Latency: ping/pong round-trip every 2s, dashboard 4th metric + phone stats display
+  - E2E verified 2026-05-16
 
 ### What's Next | 下一步
 
