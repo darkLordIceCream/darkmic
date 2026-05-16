@@ -45,14 +45,18 @@
   - **WASAPI mode verified**: 440Hz sine → opusscript encode → WASAPI → VB-Cable (192KB PCM, clean exit) | WASAPI 模式验证通过
   - Dependencies: koffi (pure JS FFI, no native build tools) | 新增依赖 koffi
 
-### What's In Progress | 进行中
+### What's Done — Continued | 已完成（续）
 
-- [ ] **F-004: Connection UX + QR code + PC management page | 连接体验 + 二维码 + PC 管理页**
-  - PC management page (`public/pc.html`) with QR code, status, real-time log
+- [x] **F-004: Connection UX + QR code + PC management page | 连接体验 + 二维码 + PC 管理页**
+  - PC management page (`public/pc.html`) — dark theme, QR code, real-time metrics, event log
   - Route split: `/` → pc.html, `/phone` → phone client
-  - Auto-open browser on startup
-  - WebSocket state push to PC page (same WS as phone)
-  - Phone UI: connection status, auto-reconnect, error handling
+  - Auto-open browser on startup (`windowsHide: true` to avoid Ctrl+C double-prompt)
+  - WebSocket state broadcast to all clients (PC dashboard + phone)
+  - Phone UI: auto-reconnect (exponential backoff 1s→30s, max 10 attempts)
+  - Phone UI: mic permission error handling (NotAllowed, NotFound, NotReadable)
+  - IP detection: filters virtual adapters by name, prefers private LAN ranges (192.168/10/172.16-31)
+  - WASAPI: targets VB-Cable by device ID (not WAVE_MAPPER)
+  - E2E verified: phone → PC → VB-Cable audio flow works
 
 ### What's Next | 下一步
 
