@@ -433,7 +433,7 @@ ws.onmessage = (event) => {
       case 'state':
         setStatus(msg.state);
         if (msg.state === 'started') { startTime = Date.now(); isStreaming = true; }
-        if (msg.state === 'stopped') { isStreaming = false; metricLatency.textContent = '—'; }
+        if (msg.state === 'stopped' || msg.state === 'error') { isStreaming = false; metricLatency.textContent = '—'; }
         log(`state → <b>${msg.state}</b>`, msg.state === 'error' ? 'warn' : 'good');
         break;
       case 'stats':

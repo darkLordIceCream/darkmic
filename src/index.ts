@@ -24,7 +24,7 @@ const wss = new WebSocketServer({ server, maxPayload: 100 * 1024 });
 
 const port = parseInt(process.env.PORT || '3000', 10);
 
-const audioMode = (process.env.AUDIO_PIPE_MODE || 'file') as AudioPipeMode;
+const audioMode = (process.env.AUDIO_PIPE_MODE || 'wasapi') as AudioPipeMode;
 
 const vbcableInstalled = checkVBCable();
 
