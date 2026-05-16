@@ -18,6 +18,8 @@ let audioCtx = null;
 let rawStream = null;
 let pingTimer = null;
 let latencyMs = 0;
+let currentBitrate = 32000;
+let lastBitrateSwitch = 0;
 
 // ── Reconnect ────────────────────────────────────────────────────
 
@@ -121,6 +123,7 @@ async function connectAndStream() {
             setStatus(`Server: ${msg.state}`, label);
           } else if (msg.type === 'pong') {
             latencyMs = Date.now() - msg.t;
+            adaptBitrate();
             updateStats();
             if (ws && ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: 'latency', ms: Math.round(latencyMs / 2) }));
@@ -146,6 +149,8 @@ async function connectAndStream() {
     // 3. Create AudioEncoder (opus) — re-create on every reconnect
     chunkCount = 0;
     byteCount = 0;
+    currentBitrate = 32000;
+    lastBitrateSwitch = 0;
 
     encoder = new AudioEncoder({
       output: (chunk) => {
@@ -305,11 +310,32 @@ function setStatus(msg, className) {
   statusEl.className = 'status' + (className ? ` ${className}` : '');
 }
 
+function adaptBitrate() {
+  const oneWay = latencyMs / 2;
+  const target = oneWay < 50 ? 64000 : 32000;
+  if (target === currentBitrate) return;
+  // Debounce: don't switch more than once per 5s
+  if (Date.now() - lastBitrateSwitch < 5000) return;
+
+  if (!encoder || encoder.state !== 'configured') return;
+
+  currentBitrate = target;
+  lastBitrateSwitch = Date.now();
+  encoder.configure({
+    codec: 'opus',
+    sampleRate: 48000,
+    numberOfChannels: 1,
+    bitrate: target,
+  });
+  updateStats();
+}
+
 function updateStats() {
   const kb = (byteCount / 1024).toFixed(1);
-  let text = `${chunkCount} chunks · ${kb} KB sent`;
+  const kbps = Math.round(currentBitrate / 1000);
+  let text = `${chunkCount} chunks · ${kb} KB sent · ${kbps}kbps`;
   if (latencyMs > 0) {
-    text += ` · ${Math.round(latencyMs / 2)}ms one-way`;
+    text += ` · ${Math.round(latencyMs / 2)}ms`;
   }
   statsEl.textContent = text;
 }
