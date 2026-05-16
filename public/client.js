@@ -87,6 +87,8 @@ async function start() {
     comp.release.value = 0.25;
     source.connect(comp);
     const dest = audioCtx.createMediaStreamDestination();
+    dest.channelCountMode = 'explicit';
+    dest.channelCount = 1;
     comp.connect(dest);
     stream = dest.stream;
 
