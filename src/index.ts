@@ -158,15 +158,17 @@ wss.on('connection', (ws) => {
         `Chunk #${chunkCount}: ${data.length} bytes (total ${totalBytes})`,
       );
       broadcast({ type: 'stats', bytes: totalBytes, chunks: chunkCount });
-    } else if (typeof data === 'string') {
+    } else {
       // Text messages: ping/pong relay for latency measurement
       try {
-        const msg = JSON.parse(data);
+        const msg = JSON.parse(data.toString());
         if (msg.type === 'ping') {
           ws.send(JSON.stringify({ type: 'pong', t: msg.t }));
         } else if (msg.type === 'latency') {
           console.log(`Latency: ${msg.ms}ms one-way`);
           broadcast({ type: 'latency', ms: msg.ms });
+        } else {
+          console.log('Text message:', data.toString());
         }
       } catch { /* ignore malformed JSON */ }
     }
