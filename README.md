@@ -102,7 +102,7 @@
 | 📊 &nbsp;**Live latency** | Real-time one-way ms on dashboard + phone |
 | 🔊 &nbsp;**Opus codec** | Speech-optimized, efficient bandwidth |
 | 🔌 &nbsp;**VB-Cable output** | System-level virtual microphone device |
-| 📦 &nbsp;**Single .exe** | Packaged via pkg, FFmpeg bundled alongside |
+| 📦 &nbsp;**Single .exe** | Standalone via pkg, zero external dependencies |
 | 🖥️ &nbsp;**Windows 10/11** | Any mobile device with Chromium browser |
 | 🌐 &nbsp;**QR connect** | Scan QR on PC dashboard to connect phone |
 
@@ -116,8 +116,7 @@
 
 ```bash
 # Install system dependencies (Windows)
-winget install ffmpeg
-winget install OpenSSL.Light
+winget install ffmpeg    # optional — needed for ffplay dev mode only
 ```
 
 > [!IMPORTANT]
@@ -197,6 +196,8 @@ pnpm run dev            # Dev server with hot reload
 pnpm run typecheck      # TypeScript type check only
 pnpm run build          # Compile TypeScript to dist/
 pnpm run start          # Production server (node dist/index.js)
+pnpm run pkg            # Build standalone .exe (requires prior build)
+pnpm run package        # Full release: build + pkg → release/ folder
 pnpm test:audio         # Audio pipe test → file mode
 pnpm test:audio -- ffplay   # Audio pipe test → speaker playback
 pnpm test:audio -- wasapi   # Audio pipe test → VB-Cable output
@@ -214,7 +215,7 @@ pnpm test:audio -- wasapi   # Audio pipe test → VB-Cable output
 | F-004 | QR code + PC dashboard + auto-reconnect | 2026-05-16 | `done` |
 | F-005 | AGC + adaptive bitrate + latency measurement | 2026-05-16 | `done` |
 | F-006 | WebRTC P2P transport | — | `deferred` |
-| F-007 | Windows pkg packaging | — | `todo` |
+| F-007 | Windows pkg packaging | 2026-05-16 | `done` |
 | F-008 | Installer + system tray | — | `todo` |
 
 ---

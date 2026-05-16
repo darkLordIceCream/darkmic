@@ -102,7 +102,7 @@
 | 📊 &nbsp;**实时延迟** | 仪表盘和手机端显示单向延迟 |
 | 🔊 &nbsp;**Opus 编码** | 人声优化，带宽友好 |
 | 🔌 &nbsp;**VB-Cable 输出** | 系统级虚拟麦克风 |
-| 📦 &nbsp;**单文件 .exe** | pkg 打包，FFmpeg 内置 |
+| 📦 &nbsp;**单文件 .exe** | pkg 打包，零外部依赖 |
 | 🖥️ &nbsp;**Windows 10/11** | 任何有 Chromium 内核浏览器的移动设备 |
 | 🌐 &nbsp;**二维码连接** | PC 仪表盘扫码即可连接手机 |
 
@@ -116,8 +116,7 @@
 
 ```bash
 # 安装系统依赖 (Windows)
-winget install ffmpeg
-winget install OpenSSL.Light
+winget install ffmpeg    # 可选 — 仅 ffplay 开发模式需要
 ```
 
 > [!IMPORTANT]
@@ -197,6 +196,8 @@ pnpm run dev            # 开发服务器（热重载）
 pnpm run typecheck      # TypeScript 类型检查
 pnpm run build          # 编译到 dist/
 pnpm run start          # 生产服务器（node dist/index.js）
+pnpm run pkg            # 构建独立 exe（需要先 build）
+pnpm run package        # 完整发布：build + pkg → release/ 文件夹
 pnpm test:audio         # 音频管线测试 → file 模式
 pnpm test:audio -- ffplay   # 音频管线测试 → 扬声器播放
 pnpm test:audio -- wasapi   # 音频管线测试 → VB-Cable 输出
@@ -214,7 +215,7 @@ pnpm test:audio -- wasapi   # 音频管线测试 → VB-Cable 输出
 | F-004 | 二维码 + PC 仪表盘 + 自动重连 | 2026-05-16 | `done` |
 | F-005 | AGC + 自适应码率 + 延迟测量 | 2026-05-16 | `done` |
 | F-006 | WebRTC P2P 传输 | — | `deferred` |
-| F-007 | Windows pkg 打包 | — | `todo` |
+| F-007 | Windows pkg 打包 | 2026-05-16 | `done` |
 | F-008 | 安装程序 + 系统托盘 | — | `todo` |
 
 ---

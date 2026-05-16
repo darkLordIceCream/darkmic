@@ -8,3 +8,4 @@ certs/
 *.log
 *.raw
 .claude/
+release/

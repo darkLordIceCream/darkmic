@@ -2,11 +2,20 @@ import { exec } from 'node:child_process';
 import express from 'express';
 import { createServer } from 'node:https';
 import { networkInterfaces } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 import { WebSocketServer, WebSocket } from 'ws';
 import { loadOrCreateCertificates } from './cert.js';
 import { createAudioPipe, type AudioPipeMode, type AudioPipeState, type AudioPipe } from './audio.js';
 import { checkVBCable } from './wasapi.js';
+
+function appRoot(): string {
+  if (import.meta.url.includes('/snapshot/')) return dirname(process.execPath);
+  return dirname(dirname(fileURLToPath(import.meta.url)));
+}
+
+const publicDir = join(appRoot(), 'public');
 
 const certs = loadOrCreateCertificates();
 const app = express();
@@ -30,11 +39,11 @@ if (!vbcableInstalled) {
 // ── Routing (before static to take priority) ───────────────────────
 
 app.get('/', (_req, res) => {
-  res.sendFile('pc.html', { root: 'public' });
+  res.sendFile('pc.html', { root: publicDir });
 });
 
 app.get('/phone', (_req, res) => {
-  res.sendFile('index.html', { root: 'public' });
+  res.sendFile('index.html', { root: publicDir });
 });
 
 // ── LAN URL ────────────────────────────────────────────────────────
@@ -96,7 +105,7 @@ app.get('/api/qr', async (_req, res) => {
 });
 
 // Static files (after routes — fallback for /client.js, etc.)
-app.use(express.static('public'));
+app.use(express.static(publicDir));
 
 // ── WebSocket broadcast ────────────────────────────────────────────
 

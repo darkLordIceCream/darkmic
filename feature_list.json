@@ -64,11 +64,11 @@
       "id": "F-007",
       "name": "Windows pkg packaging",
       "nameZh": "Windows pkg 打包",
-      "description": "Compile server into standalone .exe via @yao-pkg/pkg. Bundle ffmpeg.exe alongside. First-run generates self-signed certs. Output a single distributable folder.",
-      "descriptionZh": "通过 @yao-pkg/pkg 将服务端编译为独立 exe，附带 ffmpeg.exe，首次运行自动生成证书，输出可分发的文件夹",
+      "description": "Compile server into standalone .exe via @yao-pkg/pkg. Zero external deps: certs via Node.js crypto, audio via WinMM (no FFmpeg). public/ alongside exe. VB-Cable detection on dashboard.",
+      "descriptionZh": "通过 @yao-pkg/pkg 将服务端编译为独立 exe。零外部依赖：证书用 Node.js crypto 生成，音频用 WinMM（无需 FFmpeg）。public/ 放在 exe 旁边。仪表盘检测 VB-Cable 提醒",
       "dependencies": ["F-004"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "cert.ts: Node.js crypto generates self-signed certs (no openssl). pkg builds 72MB exe. Verified: exe starts from release/ folder, generates certs, serves HTTPS, detects LAN IP, serves web UI from public/. VB-Cable check broadcasts to dashboard. Full init.sh passes. 2026-05-16"
     },
     {
       "id": "F-008",

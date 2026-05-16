@@ -3,9 +3,9 @@
 ## Current State | 当前状态
 
 **Last Updated | 最后更新:** 2026-05-16
-**Session | 会话:** Documentation sync — F-005 completion
-**Active Feature | 当前功能:** F-005 done — next F-007 | F-005 已完成 — 下一步 F-007
-**Branch | 分支:** `main`
+**Session | 会话:** F-007 — Windows pkg packaging (COMPLETE) | F-007 完成
+**Active Feature | 当前功能:** F-008 next | F-008 下一步
+**Branch | 分支:** `feat/f-007-pkg-packaging`
 
 ## Status | 状态
 
@@ -66,9 +66,19 @@
   - Latency: ping/pong round-trip every 2s, dashboard 4th metric + phone stats display
   - E2E verified 2026-05-16
 
+- [x] **F-007: Windows pkg packaging | pkg 打包**
+  - cert.ts: Node.js `crypto` generates self-signed X.509 certs (no openssl, no node-forge)
+  - @yao-pkg/pkg builds 72MB standalone exe (node20-win-x64)
+  - Path resolution: `appRoot()` via `/snapshot/` detection for pkg, `import.meta.url` for dev
+  - public/ alongside exe (not bundled — Express static needs real filesystem path)
+  - VB-Cable detection: dashboard warning with download link when not installed
+  - pnpm scripts: `pkg` (build exe), `package` (full release → release/ folder)
+  - Verified: exe from release/ starts, generates certs, serves HTTPS, finds public/, detects LAN IP
+  - Zero external deps: no FFmpeg (WinMM), no openssl (crypto)
+
 ### What's Next | 下一步
 
-1. **F-007**: Windows pkg packaging | pkg 打包
+1. **F-008**: Launcher UX + installer | 启动体验 + 安装程序
 
 ## Blockers / Risks | 阻塞项 / 风险
 
@@ -101,7 +111,11 @@
   > VB-Cable 输出：FFmpeg 的 WASAPI 输出在两个主流 Windows 构建版都缺失，改用 WinMM waveOut API，可通过名称精确指定目标设备
 - **Node.js retained vs Rust**: Node.js is sufficient for I/O-bound audio pipeline.
 - **Windows-first (VB-Cable)**: macOS not supported.
-- **packaging via pkg**: Standalone .exe via @yao-pkg/pkg.
+- **packaging via pkg**: Standalone .exe via @yao-pkg/pkg. node20-win-x64 target, 72MB output.
+- **Self-signed cert via Node.js crypto**: RSA 2048 keypair + manual X.509 DER construction + `crypto.createSign('RSA-SHA256')`. No openssl, no node-forge (ASN.1 incompatibility with OpenSSL 3.x). Proven working with Node 24 TLS.
+- **Path resolution**: `appRoot()` detects pkg via `/snapshot/` check in `import.meta.url`, falls back to `dirname(dirname(fileURLToPath(import.meta.url)))`. public/ alongside exe.
+- **VB-Cable detection**: Dashboard shows warning banner with download link. Separate from pkg packaging but added in F-007 branch.
+- **node-forge rejected**: Generated certs passed forge's own parser but failed OpenSSL 3.x ASN.1 validation (illegal padding). Reverted to Node.js crypto approach.
 - **Chromium-only**: No cross-browser testing beyond Chromium-based browsers (Chrome, Edge, Brave, etc.).
 - **No TURN/STUN**: Local network only.
 - **pnpm**: Package manager.
@@ -117,7 +131,13 @@
 - `scripts/test-audio.ts` — Fix: TOCTOU (existsSync→try/catch), unused import | 修复 TOCTOU
 - `src/audio.ts` — Fix: capture proc local in write() to avoid stale reference | 修复 proc 引用竞态
 - `src/index.ts` — Fix: remove dead pipeState, type sendState param | 清理死代码，类型化参数
-- `.gitignore` — Add *.raw, .claude/ | 忽略测试产物和本地配置
+- `.gitignore` — Add *.raw, .claude/, release/ | 忽略测试产物和本地配置
+- `src/cert.ts` — F-007: rewritten with Node.js crypto (no openssl), manual X.509 DER + RSA signing | F-007 重写：Node.js crypto 生成自签名证书
+- `src/index.ts` — F-007: appRoot() path resolution for pkg, VB-Cable check on startup + broadcast | F-007 路径解析 + VB-Cable 检测广播
+- `src/wasapi.ts` — F-007: export checkVBCable() for device presence detection | F-007 导出 VB-Cable 检测函数
+- `public/pc.html` — F-007: VB-Cable warning banner with download link | F-007 VB-Cable 未安装警告
+- `package.json` — F-007: @yao-pkg/pkg, pkg + package scripts | F-007 添加打包依赖和脚本
+- `scripts/package-release.mjs` — New: collects exe + public/ into release/ folder | 发布收集脚本
 
 ## Evidence of Completion | 完成证据
 
@@ -129,7 +149,7 @@
 - [x] WASAPI mode test: 440Hz sine → opusscript → WinMM waveOut → "CABLE Input (VB-Audio Virtual C)" (192KB PCM, clean exit 0) | WASAPI 验证通过
 - [x] State callbacks: started → stopped lifecycle confirmed | 状态回调验证通过
 - [x] Auto-restart: spawnFfplay, max restarts=3, restarting/error state transitions | 自动重启已实现
-- [x] `openssl` dependency documented in README prerequisites | OpenSSL 依赖已文档化
+- [x] F-007: pkg exe builds + runs from release/, certs via Node.js crypto (no openssl), zero external deps | pkg 打包验证通过
 - [x] E2E phone → PC audio: real mobile device (Chromium) → VB-Cable verified | 手机端到端真实验证通过
 - [ ] Push to remote: HTTPS auth blocked in WSL | 推送到远端受阻
 
