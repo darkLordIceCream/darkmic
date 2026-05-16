@@ -101,7 +101,7 @@
 | 🔌 &nbsp;**VB-Cable 输出** | 系统级虚拟麦克风 |
 | 📦 &nbsp;**单文件 .exe** | pkg 打包，FFmpeg 内置 |
 | 🖥️ &nbsp;**Windows 10/11** | 支持安卓手机和 iPad |
-| 🌐 &nbsp;**二维码连接** | *(即将到来)* |
+| 🌐 &nbsp;**二维码连接** | PC 仪表盘扫码即可连接手机 |
 
 </div>
 
@@ -132,16 +132,18 @@ pnpm run dev
 终端会显示局域网 IP：
 
 ```
-  ➜  Phone: open https://192.168.1.100:3000 in Chrome
+  ➜  Dashboard: https://localhost:3000
+  ➜  Phone:     https://192.168.1.100:3000/phone
 ```
 
 **连接**
 
 <table>
-<tr><td>①</td><td>手机 Chrome 打开终端显示的网址</td></tr>
-<tr><td>②</td><td>点<b>「高级 → 继续前往」</b>（自签名证书 — <a href="#-常见问题">正常现象</a>）</td></tr>
-<tr><td>③</td><td>点<b>「Start Microphone」</b> → 允许麦克风权限</td></tr>
-<tr><td>④</td><td>说话 — 音频实时传输到电脑</td></tr>
+<tr><td>①</td><td>PC 打开 <b>https://localhost:3000</b> — 仪表盘显示二维码</td></tr>
+<tr><td>②</td><td>用<b>手机 Chrome</b> 扫描二维码，或手动输入 Phone 网址</td></tr>
+<tr><td>③</td><td>点<b>「高级 → 继续前往」</b>（自签名证书 — <a href="#-常见问题">正常现象</a>）</td></tr>
+<tr><td>④</td><td>点<b>「Start Microphone」</b> → 允许麦克风权限</td></tr>
+<tr><td>⑤</td><td>说话 — 音频实时输出到电脑的 VB-Cable 虚拟麦克风</td></tr>
 </table>
 
 ---
@@ -169,9 +171,10 @@ darkmic/
 │   ├── cert.ts             # 自签名 SSL 证书生成
 │   ├── audio.ts            # AudioPipe 工厂 (3 种模式)
 │   └── wasapi.ts           # WinMM waveOut → VB-Cable
-├── public/                 # 手机端页面
+├── public/                 # Web 页面
+│   ├── pc.html             # PC 仪表盘（二维码、指标、事件日志）
 │   ├── index.html          # 手机 UI
-│   └── client.js           # WebCodecs + WebSocket 客户端
+│   └── client.js           # WebCodecs + WebSocket + 自动重连
 ├── scripts/                # 开发工具
 ├── AGENTS.md               # AI 代理指令（中英双语）
 ├── feature_list.json       # 功能列表
@@ -205,8 +208,8 @@ pnpm test:audio -- wasapi   # 音频管线测试 → VB-Cable 输出
 | F-001 | 项目脚手架 + HTTPS 证书 | 2026-05-13 | `done` |
 | F-002 | WebCodecs + WebSocket 管线 | 2026-05-13 | `done` |
 | F-003 | opusscript 解码 → WinMM → VB-Cable | 2026-05-16 | `done` |
-| F-004 | 二维码 + 连接体验 | — | `todo` |
-| F-005 | 延迟调优 + 质量控制 | — | `todo` |
+| F-004 | 二维码 + PC 仪表盘 + 自动重连 | 2026-05-16 | `done` |
+| F-005 | AGC + 音质切换 + 延迟测量 | — | `todo` |
 | F-006 | WebRTC P2P 传输 | — | `deferred` |
 | F-007 | Windows pkg 打包 | — | `todo` |
 | F-008 | 安装程序 + 系统托盘 | — | `todo` |

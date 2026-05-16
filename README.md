@@ -101,7 +101,7 @@
 | 🔌 &nbsp;**VB-Cable output** | System-level virtual microphone device |
 | 📦 &nbsp;**Single .exe** | Packaged via pkg, FFmpeg bundled alongside |
 | 🖥️ &nbsp;**Windows 10/11** | Android phone & iPad supported |
-| 🌐 &nbsp;**QR connect** | *(coming soon)* |
+| 🌐 &nbsp;**QR connect** | Scan QR on PC dashboard to connect phone |
 
 </div>
 
@@ -132,16 +132,18 @@ pnpm run dev
 The terminal shows your LAN IPs:
 
 ```
-  ➜  Phone: open https://192.168.1.100:3000 in Chrome
+  ➜  Dashboard: https://localhost:3000
+  ➜  Phone:     https://192.168.1.100:3000/phone
 ```
 
 **Connect**
 
 <table>
-<tr><td>①</td><td>Open the URL on <b>phone's Chrome</b></td></tr>
-<tr><td>②</td><td>Tap <b>Advanced → Proceed</b> (self-signed cert — <a href="#-faq">expected</a>)</td></tr>
-<tr><td>③</td><td>Tap <b>"Start Microphone"</b> → allow mic permission</td></tr>
-<tr><td>④</td><td>Speak — audio streams to your PC in real time</td></tr>
+<tr><td>①</td><td>Open <b>https://localhost:3000</b> on your PC — the dashboard appears with a QR code</td></tr>
+<tr><td>②</td><td>Scan the QR code with <b>phone's Chrome</b>, or open the Phone URL manually</td></tr>
+<tr><td>③</td><td>Tap <b>Advanced → Proceed</b> (self-signed cert — <a href="#-faq">expected</a>)</td></tr>
+<tr><td>④</td><td>Tap <b>"Start Microphone"</b> → allow mic permission</td></tr>
+<tr><td>⑤</td><td>Speak — audio streams to your PC's VB-Cable virtual microphone</td></tr>
 </table>
 
 ---
@@ -169,9 +171,10 @@ darkmic/
 │   ├── cert.ts             # Self-signed SSL cert generation
 │   ├── audio.ts            # AudioPipe factory (3 modes)
 │   └── wasapi.ts           # WinMM waveOut → VB-Cable
-├── public/                 # Phone-facing web app
+├── public/                 # Web app pages
+│   ├── pc.html             # PC dashboard (QR code, metrics, event log)
 │   ├── index.html          # Phone UI
-│   └── client.js           # WebCodecs + WebSocket client
+│   └── client.js           # WebCodecs + WebSocket + auto-reconnect
 ├── scripts/                # Dev utilities
 ├── AGENTS.md               # AI agent instructions
 ├── feature_list.json       # Feature tracker
@@ -205,8 +208,8 @@ pnpm test:audio -- wasapi   # Audio pipe test → VB-Cable output
 | F-001 | Project scaffold + HTTPS certs | 2026-05-13 | `done` |
 | F-002 | WebCodecs + WebSocket pipeline | 2026-05-13 | `done` |
 | F-003 | opusscript decode → WinMM → VB-Cable | 2026-05-16 | `done` |
-| F-004 | QR code + connection UX | — | `todo` |
-| F-005 | Latency tuning + quality controls | — | `todo` |
+| F-004 | QR code + PC dashboard + auto-reconnect | 2026-05-16 | `done` |
+| F-005 | AGC + quality selector + latency measurement | — | `todo` |
 | F-006 | WebRTC P2P transport | — | `deferred` |
 | F-007 | Windows pkg packaging | — | `todo` |
 | F-008 | Installer + system tray | — | `todo` |

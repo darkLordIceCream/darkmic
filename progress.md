@@ -60,7 +60,10 @@
 
 ### What's Next | 下一步
 
-1. **F-005**: Latency tuning + quality controls | 延迟调优
+1. **F-005**: AGC + quality selector + latency measurement | 自动增益 + 音质切换 + 延迟测量
+   - Browser-side AGC via Web Audio API `DynamicsCompressorNode`
+   - Voice/music toggle (32kbps / 64kbps Opus)
+   - E2E latency measurement (timestamp round-trip), display on dashboard
 
 ## Blockers / Risks | 阻塞项 / 风险
 
