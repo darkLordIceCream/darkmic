@@ -49,6 +49,17 @@ async function start() {
       ws.onerror = () => reject(new Error('WebSocket connection failed'));
     });
 
+    ws.onmessage = (event) => {
+      if (typeof event.data === 'string') {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'state') {
+            setStatus(`Server: ${msg.state}`, msg.state === 'error' ? 'error' : 'connected');
+          }
+        } catch { /* ignore */ }
+      }
+    };
+
     ws.onclose = () => {
       if (isRunning) {
         setStatus('Connection lost', 'error');
