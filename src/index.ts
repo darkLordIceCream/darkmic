@@ -6,6 +6,7 @@ import QRCode from 'qrcode';
 import { WebSocketServer, WebSocket } from 'ws';
 import { loadOrCreateCertificates } from './cert.js';
 import { createAudioPipe, type AudioPipeMode, type AudioPipeState, type AudioPipe } from './audio.js';
+import { checkVBCable } from './wasapi.js';
 
 const certs = loadOrCreateCertificates();
 const app = express();
@@ -16,9 +17,14 @@ const port = parseInt(process.env.PORT || '3000', 10);
 
 const audioMode = (process.env.AUDIO_PIPE_MODE || 'file') as AudioPipeMode;
 
+const vbcableInstalled = checkVBCable();
+
 console.log(`Audio pipe mode: ${audioMode}`);
 if (audioMode !== 'file') {
   console.log(`  (set AUDIO_PIPE_MODE=file for safe logging only)`);
+}
+if (!vbcableInstalled) {
+  console.warn('VB-Cable not detected — install from https://vb-audio.com/Cable/');
 }
 
 // ── Routing (before static to take priority) ───────────────────────
@@ -110,10 +116,11 @@ function broadcast(msg: Record<string, unknown>) {
 wss.on('connection', (ws) => {
   clients.add(ws);
 
-  // Send LAN URL immediately (dashboard needs it for QR code)
+  // Send LAN URL and VB-Cable status immediately
   const lanUrl = getLanUrl();
-  if (lanUrl && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'url', url: lanUrl }));
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'url', url: lanUrl || '' }));
+    ws.send(JSON.stringify({ type: 'vbcable', installed: vbcableInstalled }));
   }
 
   let audioPipeActive = false;

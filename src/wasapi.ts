@@ -77,6 +77,10 @@ function findDeviceId(deviceName: string): { id: number; name: string } | null {
   return null;
 }
 
+export function checkVBCable(): boolean {
+  return findDeviceId('CABLE Input (VB-Audio Virtual C') !== null;
+}
+
 // ── WAVEFORMATEX helper ──────────────────────────────────────────────
 
 function createPcmFormat(sampleRate: number, channels: number, bitsPerSample: number): Buffer {

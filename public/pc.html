@@ -256,6 +256,25 @@
   .log-msg.good { color: var(--accent); }
   .log-msg.info { color: var(--blue); }
 
+  /* ── VB-Cable warning ────────────────────────────── */
+  .vbcable-warn {
+    background: rgba(255,140,0,0.12);
+    border: 1px solid rgba(255,140,0,0.35);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--warn);
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .vbcable-warn a {
+    color: var(--warn);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .vbcable-warn.hidden { display: none; }
+
   /* ── Responsive ──────────────────────────────────── */
   @media (max-width: 720px) {
     .dashboard {
@@ -289,6 +308,10 @@
         <div class="status-dot"></div>
         <span id="status-text">idle</span>
       </div>
+    </div>
+
+    <div class="vbcable-warn hidden" id="vbcable-warn">
+      VB-Cable not installed — <a href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">Download here</a>
     </div>
 
     <div class="metrics">
@@ -400,6 +423,12 @@ ws.onmessage = (event) => {
       case 'url':
         document.getElementById('qr-url').textContent = msg.url;
         log(`LAN URL: ${msg.url}`, 'info');
+        break;
+      case 'vbcable':
+        if (!msg.installed) {
+          const warn = document.getElementById('vbcable-warn');
+          if (warn) warn.classList.remove('hidden');
+        }
         break;
       case 'state':
         setStatus(msg.state);
