@@ -403,6 +403,7 @@ ws.onmessage = (event) => {
       case 'state':
         setStatus(msg.state);
         if (msg.state === 'started' && !startTime) startTime = Date.now();
+        if (msg.state === 'stopped') { startTime = null; metricUptime.textContent = '00:00'; metricLatency.textContent = '—'; }
         log(`state → <b>${msg.state}</b>`, msg.state === 'error' ? 'warn' : 'good');
         break;
       case 'stats':
