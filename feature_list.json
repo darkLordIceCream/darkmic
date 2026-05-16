@@ -47,7 +47,7 @@
       "description": "Browser-side AGC (auto gain control) via Web Audio API DynamicsCompressorNode. Voice/music quality toggle (32kbps/64kbps Opus). End-to-end latency measurement with timestamp round-trip. Display latency on dashboard.",
       "descriptionZh": "浏览器端通过 Web Audio API 实现 AGC 自动增益控制。voice/music 音质切换（32kbps/64kbps Opus）。端到端延迟测量（时间戳往返），仪表盘显示延迟数值",
       "dependencies": ["F-004"],
-      "status": "not-started",
+      "status": "in-progress",
       "evidence": ""
     },
     {
