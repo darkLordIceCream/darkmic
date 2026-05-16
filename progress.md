@@ -3,8 +3,9 @@
 ## Current State | 当前状态
 
 **Last Updated | 最后更新:** 2026-05-16
-**Session | 会话:** F-003 PR review, merge to main, branch cleanup
-**Active Feature | 当前功能:** F-003 merged | F-003 已合并
+**Session | 会话:** F-004 — Connection UX + QR code + PC management page
+**Active Feature | 当前功能:** F-004 in-progress | F-004 进行中
+**Branch | 分支:** `feat/f-004-connection-ux`
 
 ## Status | 状态
 
@@ -44,13 +45,22 @@
   - **WASAPI mode verified**: 440Hz sine → opusscript encode → WASAPI → VB-Cable (192KB PCM, clean exit) | WASAPI 模式验证通过
   - Dependencies: koffi (pure JS FFI, no native build tools) | 新增依赖 koffi
 
-### What's In Progress | 进行中
+### What's Done — Continued | 已完成（续）
 
-- (none — F-003 complete | F-003 已全部完成)
+- [x] **F-004: Connection UX + QR code + PC management page | 连接体验 + 二维码 + PC 管理页**
+  - PC management page (`public/pc.html`) — dark theme, QR code, real-time metrics, event log
+  - Route split: `/` → pc.html, `/phone` → phone client
+  - Auto-open browser on startup (`windowsHide: true` to avoid Ctrl+C double-prompt)
+  - WebSocket state broadcast to all clients (PC dashboard + phone)
+  - Phone UI: auto-reconnect (exponential backoff 1s→30s, max 10 attempts)
+  - Phone UI: mic permission error handling (NotAllowed, NotFound, NotReadable)
+  - IP detection: filters virtual adapters by name, prefers private LAN ranges (192.168/10/172.16-31)
+  - WASAPI: targets VB-Cable by device ID (not WAVE_MAPPER)
+  - E2E verified: phone → PC → VB-Cable audio flow works
 
 ### What's Next | 下一步
 
-1. **F-004**: Connection UX + QR code + error handling | 连接体验
+1. **F-005**: Latency tuning + quality controls | 延迟调优
 
 ## Blockers / Risks | 阻塞项 / 风险
 
@@ -87,6 +97,7 @@
 - **Chrome-only**: No cross-browser testing.
 - **No TURN/STUN**: Local network only.
 - **pnpm**: Package manager.
+- **F-004 PC management page**: `/` serves `pc.html` (management UI with QR code + log panel), `/phone` serves `index.html` (phone client). QR code generated client-side via `qrcode` npm package. PC page connects to same WebSocket for state/log push. | PC 管理页：`/` 提供管理界面，`/phone` 提供手机端，二维码通过 qrcode 包在浏览器端生成，PC 页通过同一 WebSocket 接收状态推送。
 
 ## Files Modified This Session | 本次修改的文件
 
