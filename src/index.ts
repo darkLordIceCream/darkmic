@@ -92,8 +92,23 @@ function isPrivateLan(addr: string): boolean {
 
 app.post('/api/exit', (_req, res) => {
   res.json({ ok: true });
-  console.log('Shutting down by dashboard request...');
-  process.exit(0);
+  console.log('Shutting down...');
+
+  // Close all WebSocket connections
+  for (const client of clients) {
+    try { client.close(); } catch {}
+  }
+  clients.clear();
+
+  // Close the HTTPS server, then force exit
+  server.close(() => {
+    process.exit(0);
+  });
+
+  // Fallback: force exit after 2s even if server.close hangs
+  setTimeout(() => {
+    process.exit(0);
+  }, 2000);
 });
 
 // ── QR code endpoint ───────────────────────────────────────────────
