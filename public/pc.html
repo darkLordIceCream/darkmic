@@ -148,9 +148,30 @@
     transition: background 0.3s, box-shadow 0.3s;
   }
 
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
   .status-badge.idle    { color: var(--text-dim); }
   .status-badge.active  { color: var(--accent); border-color: var(--accent-dim); }
   .status-badge.error   { color: var(--danger); border-color: var(--danger); }
+
+  /* ── Exit button ─────────────────────────────────────── */
+  .btn-exit {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .btn-exit:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: rgba(239,68,68,0.08);
+  }
   .status-badge.active .status-dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 
   /* ── Metrics row ─────────────────────────────────── */
@@ -304,9 +325,12 @@
 
     <div class="header">
       <div class="logo">darkmic<span>/dashboard</span></div>
-      <div class="status-badge idle" id="status-badge">
-        <div class="status-dot"></div>
-        <span id="status-text">idle</span>
+      <div class="header-right">
+        <div class="status-badge idle" id="status-badge">
+          <div class="status-dot"></div>
+          <span id="status-text">idle</span>
+        </div>
+        <button class="btn-exit" id="btn-exit" title="Shut down darkmic">Exit</button>
       </div>
     </div>
 
@@ -405,6 +429,12 @@ function updateUptime() {
 }
 
 setInterval(updateUptime, 1000);
+
+// ── Exit button ─────────────────────────────────────
+document.getElementById('btn-exit')?.addEventListener('click', async () => {
+  if (!confirm('Shut down darkmic server?')) return;
+  try { await fetch('/api/exit', { method: 'POST' }); } catch { /* server already gone */ }
+});
 
 // ── WebSocket for state/metric log ─────────────────
 

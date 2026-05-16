@@ -88,6 +88,14 @@ function isPrivateLan(addr: string): boolean {
   return false;
 }
 
+// ── Exit endpoint ───────────────────────────────────────────────────
+
+app.post('/api/exit', (_req, res) => {
+  res.json({ ok: true });
+  console.log('Shutting down by dashboard request...');
+  process.exit(0);
+});
+
 // ── QR code endpoint ───────────────────────────────────────────────
 
 app.get('/api/qr', async (_req, res) => {
