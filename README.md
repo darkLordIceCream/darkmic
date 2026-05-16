@@ -96,8 +96,11 @@
 |---|---|
 | 📱 &nbsp;**Zero install** on device | Just a Chromium browser — no app store needed |
 | 🔒 &nbsp;**Local network only** | No cloud, no data leaves your home |
-| ⚡ &nbsp;**~80ms latency** | WebCodecs AudioEncoder skips container overhead |
-| 🔊 &nbsp;**Opus 32kbps** | Optimized for speech, efficient bandwidth |
+| ⚡ &nbsp;**~80ms latency** | WebCodecs AudioEncoder, measured via ping/pong |
+| 🎚️ &nbsp;**Auto Gain Control** | DynamicsCompressorNode smooths speaking volume |
+| 🎵 &nbsp;**Adaptive bitrate** | Auto-switches 32↔64kbps based on latency |
+| 📊 &nbsp;**Live latency** | Real-time one-way ms on dashboard + phone |
+| 🔊 &nbsp;**Opus codec** | Speech-optimized, efficient bandwidth |
 | 🔌 &nbsp;**VB-Cable output** | System-level virtual microphone device |
 | 📦 &nbsp;**Single .exe** | Packaged via pkg, FFmpeg bundled alongside |
 | 🖥️ &nbsp;**Windows 10/11** | Any mobile device with Chromium browser |
@@ -209,7 +212,7 @@ pnpm test:audio -- wasapi   # Audio pipe test → VB-Cable output
 | F-002 | WebCodecs + WebSocket pipeline | 2026-05-13 | `done` |
 | F-003 | opusscript decode → WinMM → VB-Cable | 2026-05-16 | `done` |
 | F-004 | QR code + PC dashboard + auto-reconnect | 2026-05-16 | `done` |
-| F-005 | AGC + quality selector + latency measurement | — | `todo` |
+| F-005 | AGC + adaptive bitrate + latency measurement | 2026-05-16 | `done` |
 | F-006 | WebRTC P2P transport | — | `deferred` |
 | F-007 | Windows pkg packaging | — | `todo` |
 | F-008 | Installer + system tray | — | `todo` |

@@ -33,14 +33,14 @@ Mobile device (Chromium)               Windows PC (darkmic.exe)
 
 ### Phase 1 (current): WebCodecs AudioEncoder + WebSocket
 
-Phone uses `AudioEncoder` (WebCodecs API) to encode raw PCM → Opus at ~10ms granularity. Server decodes Opus → PCM via `opusscript` (pure JS), then pipes PCM via WinMM waveOut API to VB-Cable virtual audio device. ~80ms end-to-end latency expected.
+Phone uses `AudioEncoder` (WebCodecs API) to encode raw PCM → Opus at ~10ms granularity, with AGC (`DynamicsCompressorNode`) and adaptive bitrate (32↔64kbps based on measured latency). Server decodes Opus → PCM via `opusscript` (pure JS), then pipes PCM via WinMM waveOut API to VB-Cable virtual audio device. ~80ms end-to-end latency.
 
-> Phase 1 使用 WebCodecs AudioEncoder 编码音频，服务端通过 opusscript 纯 JS 解码，经 WinMM waveOut API 输出到 VB-Cable 虚拟声卡，延迟约 80ms。
+> Phase 1 使用 WebCodecs AudioEncoder 编码，带 AGC 自动增益和自适应码率（根据实测延迟自动切换 32↔64kbps）。服务端通过 opusscript 纯 JS 解码，经 WinMM waveOut API 输出到 VB-Cable 虚拟声卡，延迟约 80ms。
 
 ```
-Phone:   getUserMedia → MediaStreamTrackProcessor → AudioEncoder(Opus) → WebSocket
+Phone:   getUserMedia → AGC (DynamicsCompressorNode) → AudioEncoder(Opus, adaptive bitrate) → WebSocket
 PC:      WebSocket → opusscript decode → PCM → WinMM waveOut → VB-Cable
-Dashboard: / → pc.html (QR code, real-time metrics, event log)
+Dashboard: / → pc.html (QR code, 4 metrics incl. latency, event log)
 ```
 
 ### Phase 2 (future): WebRTC P2P (if latency requires)
@@ -51,18 +51,21 @@ Same server infrastructure, swap transport: `RTCPeerConnection` instead of `Audi
 
 ```
 public/               → Web app pages (served by Express)
-  pc.html               PC dashboard: QR code, real-time metrics (throughput/chunks/uptime),
+  pc.html               PC dashboard: QR code, 4 real-time metrics (throughput/chunks/uptime/latency),
                          status badge, event log panel. Connects to same WebSocket for live updates.
   index.html            Phone UI: start/stop button, connection status, stats
-  client.js             getUserMedia → MediaStreamTrackProcessor → AudioEncoder(opus) → WebSocket send.
+  client.js             getUserMedia → AGC (DynamicsCompressorNode) → AudioEncoder(opus) → WebSocket send.
                         Auto-reconnect (exponential backoff 1s→30s, max 10 attempts).
                         Mic permission error handling (NotAllowed, NotFound, NotReadable).
+                        Adaptive bitrate (32↔64kbps, debounced 5s) based on ping/pong latency.
+                        Ping every 2s → server pong → RTT/2 displayed as one-way ms.
 
 src/                  → PC server (Node.js + TypeScript, ES modules, NodeNext resolution)
   index.ts              HTTPS server (Express) + WebSocket server (ws).
                         Route split: / → pc.html, /phone → index.html.
                         /api/qr → server-side QR SVG generation.
-                        WebSocket: broadcast state/stats/url to all clients.
+                        WebSocket: broadcast state/stats/latency/url to all clients.
+                        Ping/pong relay for latency measurement (server echoes back timestamp).
                         Lazy AudioPipe: created on first binary message (dashboard doesn't trigger it).
                         getLanUrl(): filters virtual adapters by name, prefers private LAN ranges.
                         Auto-open browser on startup (windowsHide: true).

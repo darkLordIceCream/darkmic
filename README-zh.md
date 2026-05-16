@@ -96,8 +96,11 @@
 |---|---|
 | 📱 &nbsp;**设备零安装** | 只需 Chromium 内核浏览器，不用装 App |
 | 🔒 &nbsp;**纯局域网** | 不上云，数据不出家门 |
-| ⚡ &nbsp;**~80ms 低延迟** | WebCodecs AudioEncoder，跳过容器包装 |
-| 🔊 &nbsp;**Opus 32kbps** | 人声优化，带宽友好 |
+| ⚡ &nbsp;**~80ms 低延迟** | WebCodecs AudioEncoder，ping/pong 实测 |
+| 🎚️ &nbsp;**自动增益控制** | DynamicsCompressorNode 平滑说话音量 |
+| 🎵 &nbsp;**自适应码率** | 根据延迟自动切换 32↔64kbps |
+| 📊 &nbsp;**实时延迟** | 仪表盘和手机端显示单向延迟 |
+| 🔊 &nbsp;**Opus 编码** | 人声优化，带宽友好 |
 | 🔌 &nbsp;**VB-Cable 输出** | 系统级虚拟麦克风 |
 | 📦 &nbsp;**单文件 .exe** | pkg 打包，FFmpeg 内置 |
 | 🖥️ &nbsp;**Windows 10/11** | 任何有 Chromium 内核浏览器的移动设备 |
@@ -209,7 +212,7 @@ pnpm test:audio -- wasapi   # 音频管线测试 → VB-Cable 输出
 | F-002 | WebCodecs + WebSocket 管线 | 2026-05-13 | `done` |
 | F-003 | opusscript 解码 → WinMM → VB-Cable | 2026-05-16 | `done` |
 | F-004 | 二维码 + PC 仪表盘 + 自动重连 | 2026-05-16 | `done` |
-| F-005 | AGC + 音质切换 + 延迟测量 | — | `todo` |
+| F-005 | AGC + 自适应码率 + 延迟测量 | 2026-05-16 | `done` |
 | F-006 | WebRTC P2P 传输 | — | `deferred` |
 | F-007 | Windows pkg 打包 | — | `todo` |
 | F-008 | 安装程序 + 系统托盘 | — | `todo` |

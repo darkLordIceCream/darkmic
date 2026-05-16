@@ -3,9 +3,9 @@
 ## Current State | 当前状态
 
 **Last Updated | 最后更新:** 2026-05-16
-**Session | 会话:** F-005 — AGC + quality selector + latency measurement
-**Active Feature | 当前功能:** F-005 in-progress | F-005 进行中
-**Branch | 分支:** `feat/f-005-agc-quality-latency`
+**Session | 会话:** Documentation sync — F-005 completion
+**Active Feature | 当前功能:** F-005 done — next F-007 | F-005 已完成 — 下一步 F-007
+**Branch | 分支:** `main`
 
 ## Status | 状态
 
