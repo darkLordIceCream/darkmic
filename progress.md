@@ -3,9 +3,9 @@
 ## Current State | 当前状态
 
 **Last Updated | 最后更新:** 2026-05-16
-**Session | 会话:** F-004 — Connection UX + QR code + PC management page
-**Active Feature | 当前功能:** F-004 in-progress | F-004 进行中
-**Branch | 分支:** `feat/f-004-connection-ux`
+**Session | 会话:** F-005 — AGC + quality selector + latency measurement
+**Active Feature | 当前功能:** F-005 in-progress | F-005 进行中
+**Branch | 分支:** `feat/f-005-agc-quality-latency`
 
 ## Status | 状态
 
@@ -58,12 +58,17 @@
   - WASAPI: targets VB-Cable by device ID (not WAVE_MAPPER)
   - E2E verified: phone → PC → VB-Cable audio flow works
 
+### What's Done — Continued | 已完成（续）
+
+- [x] **F-005**: AGC + adaptive bitrate + latency measurement | 自动增益 + 自适应码率 + 延迟测量
+  - AGC: DynamicsCompressorNode (-50dB/12:1/3ms) between getUserMedia and AudioEncoder
+  - Adaptive bitrate: one-way <50ms → 64kbps, >=50ms → 32kbps (5s debounce)
+  - Latency: ping/pong round-trip every 2s, dashboard 4th metric + phone stats display
+  - E2E verified 2026-05-16
+
 ### What's Next | 下一步
 
-1. **F-005**: AGC + quality selector + latency measurement | 自动增益 + 音质切换 + 延迟测量
-   - Browser-side AGC via Web Audio API `DynamicsCompressorNode`
-   - Voice/music toggle (32kbps / 64kbps Opus)
-   - E2E latency measurement (timestamp round-trip), display on dashboard
+1. **F-007**: Windows pkg packaging | pkg 打包
 
 ## Blockers / Risks | 阻塞项 / 风险
 

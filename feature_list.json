@@ -42,13 +42,13 @@
     },
     {
       "id": "F-005",
-      "name": "AGC + quality selector + latency measurement",
-      "nameZh": "自动增益 + 音质切换 + 延迟测量",
-      "description": "Browser-side AGC (auto gain control) via Web Audio API DynamicsCompressorNode. Voice/music quality toggle (32kbps/64kbps Opus). End-to-end latency measurement with timestamp round-trip. Display latency on dashboard.",
-      "descriptionZh": "浏览器端通过 Web Audio API 实现 AGC 自动增益控制。voice/music 音质切换（32kbps/64kbps Opus）。端到端延迟测量（时间戳往返），仪表盘显示延迟数值",
+      "name": "AGC + adaptive bitrate + latency measurement",
+      "nameZh": "自动增益 + 自适应码率 + 延迟测量",
+      "description": "Browser-side AGC via Web Audio API DynamicsCompressorNode. Adaptive bitrate: <50ms → 64kbps, >=50ms → 32kbps (5s debounce). E2E latency via ping/pong round-trip, displayed on dashboard and phone stats.",
+      "descriptionZh": "浏览器端 Web Audio API DynamicsCompressorNode 实现 AGC。自适应码率：延迟<50ms→64kbps，>=50ms→32kbps（5秒冷却）。ping/pong 往返测端到端延迟，仪表盘和手机端均显示",
       "dependencies": ["F-004"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "done",
+      "evidence": "AGC: DynamicsCompressorNode (-50dB/12:1/3ms) between getUserMedia and AudioEncoder. Adaptive bitrate switches on latency threshold with debounce. Latency: ping every 2s, server relays pong, phone calculates RTT/2, dashboard 4th metric shows one-way ms. E2E verified 2026-05-16."
     },
     {
       "id": "F-006",

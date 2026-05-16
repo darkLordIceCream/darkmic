@@ -14,6 +14,12 @@ let reader = null;
 let chunkCount = 0;
 let byteCount = 0;
 let isRunning = false;
+let audioCtx = null;
+let rawStream = null;
+let pingTimer = null;
+let latencyMs = 0;
+let currentBitrate = 32000;
+let lastBitrateSwitch = 0;
 
 // ── Reconnect ────────────────────────────────────────────────────
 
@@ -62,13 +68,29 @@ async function start() {
     setStatus('Requesting microphone...', '');
 
     // 1. Get mic
-    stream = await navigator.mediaDevices.getUserMedia({
+    rawStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
         echoCancellation: true,
         noiseSuppression: true,
       },
     });
+
+    // 1b. AGC via DynamicsCompressorNode — smooth volume before encoding
+    audioCtx = new AudioContext({ sampleRate: 48000 });
+    const source = audioCtx.createMediaStreamSource(rawStream);
+    const comp = audioCtx.createDynamicsCompressor();
+    comp.threshold.value = -50;
+    comp.knee.value = 20;
+    comp.ratio.value = 12;
+    comp.attack.value = 0.003;
+    comp.release.value = 0.25;
+    source.connect(comp);
+    const dest = audioCtx.createMediaStreamDestination();
+    dest.channelCountMode = 'explicit';
+    dest.channelCount = 1;
+    comp.connect(dest);
+    stream = dest.stream;
 
     // 2. Connect WebSocket + setup encoder, then stream
     await connectAndStream();
@@ -101,6 +123,13 @@ async function connectAndStream() {
           if (msg.type === 'state') {
             const label = msg.state === 'error' ? 'error' : 'connected';
             setStatus(`Server: ${msg.state}`, label);
+          } else if (msg.type === 'pong') {
+            latencyMs = Date.now() - msg.t;
+            adaptBitrate();
+            updateStats();
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'latency', ms: Math.round(latencyMs / 2) }));
+            }
           }
         } catch { /* ignore */ }
       }
@@ -122,6 +151,8 @@ async function connectAndStream() {
     // 3. Create AudioEncoder (opus) — re-create on every reconnect
     chunkCount = 0;
     byteCount = 0;
+    currentBitrate = 32000;
+    lastBitrateSwitch = 0;
 
     encoder = new AudioEncoder({
       output: (chunk) => {
@@ -158,6 +189,13 @@ async function connectAndStream() {
     micBtn.className = 'mic-off';
     setStatus('Streaming...', 'connected');
     updateStats();
+
+    latencyMs = 0;
+    pingTimer = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping', t: Date.now() }));
+      }
+    }, 2000);
 
     // 5. Read loop
     readLoop();
@@ -221,11 +259,24 @@ function stop() {
   isRunning = false;
   cancelReconnect();
 
+  if (pingTimer) {
+    clearInterval(pingTimer);
+    pingTimer = null;
+  }
+
   cleanupEncoder();
 
   if (stream) {
     stream.getTracks().forEach((t) => t.stop());
     stream = null;
+  }
+  if (rawStream) {
+    rawStream.getTracks().forEach((t) => t.stop());
+    rawStream = null;
+  }
+  if (audioCtx) {
+    audioCtx.close();
+    audioCtx = null;
   }
   if (ws) {
     ws.onopen = null;
@@ -261,7 +312,32 @@ function setStatus(msg, className) {
   statusEl.className = 'status' + (className ? ` ${className}` : '');
 }
 
+function adaptBitrate() {
+  const oneWay = latencyMs / 2;
+  const target = oneWay < 50 ? 64000 : 32000;
+  if (target === currentBitrate) return;
+  // Debounce: don't switch more than once per 5s
+  if (Date.now() - lastBitrateSwitch < 5000) return;
+
+  if (!encoder || encoder.state !== 'configured') return;
+
+  currentBitrate = target;
+  lastBitrateSwitch = Date.now();
+  encoder.configure({
+    codec: 'opus',
+    sampleRate: 48000,
+    numberOfChannels: 1,
+    bitrate: target,
+  });
+  updateStats();
+}
+
 function updateStats() {
   const kb = (byteCount / 1024).toFixed(1);
-  statsEl.textContent = `${chunkCount} chunks · ${kb} KB sent`;
+  const kbps = Math.round(currentBitrate / 1000);
+  let text = `${chunkCount} chunks · ${kb} KB sent · ${kbps}kbps`;
+  if (latencyMs > 0) {
+    text += ` · ${Math.round(latencyMs / 2)}ms`;
+  }
+  statsEl.textContent = text;
 }

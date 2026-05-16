@@ -143,8 +143,8 @@ wss.on('connection', (ws) => {
 
   let audioPipe: AudioPipe | null = null;
 
-  ws.on('message', (data) => {
-    if (Buffer.isBuffer(data)) {
+  ws.on('message', (data, isBinary) => {
+    if (isBinary) {
       // First binary message = mobile client → create audio pipe on demand
       if (!audioPipe) {
         audioPipe = ensureAudioPipe();
@@ -152,12 +152,22 @@ wss.on('connection', (ws) => {
       }
 
       chunkCount++;
-      totalBytes += data.length;
-      audioPipe.write(data);
+      totalBytes += (data as Buffer).length;
+      audioPipe.write(data as Buffer);
       console.log(
-        `Chunk #${chunkCount}: ${data.length} bytes (total ${totalBytes})`,
+        `Chunk #${chunkCount}: ${(data as Buffer).length} bytes (total ${totalBytes})`,
       );
       broadcast({ type: 'stats', bytes: totalBytes, chunks: chunkCount });
+    } else {
+      // Text messages: ping/pong relay for latency measurement
+      try {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'ping') {
+          ws.send(JSON.stringify({ type: 'pong', t: msg.t }));
+        } else if (msg.type === 'latency') {
+          broadcast({ type: 'latency', ms: msg.ms });
+        }
+      } catch { /* ignore malformed JSON */ }
     }
   });
 
