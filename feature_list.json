@@ -34,10 +34,10 @@
       "id": "F-004",
       "name": "Connection UX + error handling",
       "nameZh": "连接体验 + 错误处理",
-      "description": "QR code on PC page for phone to scan, connection status display, auto-reconnect on WebSocket disconnect, mic permission error handling, start/stop controls on phone UI",
-      "descriptionZh": "电脑页面显示二维码供手机扫描，连接状态提示，断线自动重连，麦克风权限错误处理，开始/停止控制",
+      "description": "PC management page with QR code, real-time status, log panel. Phone UI: connection feedback, auto-reconnect, error handling. Auto-open browser on startup, route split: / → pc.html, /phone → client.",
+      "descriptionZh": "PC 管理页面：二维码、实时状态、日志面板。手机 UI：连接状态、自动重连、错误处理。启动自动打开浏览器，路由拆分：/ → pc.html, /phone → 手机端",
       "dependencies": ["F-003"],
-      "status": "not-started",
+      "status": "in-progress",
       "evidence": ""
     },
     {

@@ -3,8 +3,9 @@
 ## Current State | 当前状态
 
 **Last Updated | 最后更新:** 2026-05-16
-**Session | 会话:** F-003 PR review, merge to main, branch cleanup
-**Active Feature | 当前功能:** F-003 merged | F-003 已合并
+**Session | 会话:** F-004 — Connection UX + QR code + PC management page
+**Active Feature | 当前功能:** F-004 in-progress | F-004 进行中
+**Branch | 分支:** `feat/f-004-connection-ux`
 
 ## Status | 状态
 
@@ -46,11 +47,16 @@
 
 ### What's In Progress | 进行中
 
-- (none — F-003 complete | F-003 已全部完成)
+- [ ] **F-004: Connection UX + QR code + PC management page | 连接体验 + 二维码 + PC 管理页**
+  - PC management page (`public/pc.html`) with QR code, status, real-time log
+  - Route split: `/` → pc.html, `/phone` → phone client
+  - Auto-open browser on startup
+  - WebSocket state push to PC page (same WS as phone)
+  - Phone UI: connection status, auto-reconnect, error handling
 
 ### What's Next | 下一步
 
-1. **F-004**: Connection UX + QR code + error handling | 连接体验
+1. **F-005**: Latency tuning + quality controls | 延迟调优
 
 ## Blockers / Risks | 阻塞项 / 风险
 
@@ -87,6 +93,7 @@
 - **Chrome-only**: No cross-browser testing.
 - **No TURN/STUN**: Local network only.
 - **pnpm**: Package manager.
+- **F-004 PC management page**: `/` serves `pc.html` (management UI with QR code + log panel), `/phone` serves `index.html` (phone client). QR code generated client-side via `qrcode` npm package. PC page connects to same WebSocket for state/log push. | PC 管理页：`/` 提供管理界面，`/phone` 提供手机端，二维码通过 qrcode 包在浏览器端生成，PC 页通过同一 WebSocket 接收状态推送。
 
 ## Files Modified This Session | 本次修改的文件
 
