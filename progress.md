@@ -88,7 +88,11 @@
 - **现象**: 双击打包好的 darkmic.exe 运行后，手机连接、点停止，uptime 持续计时不停止，PC 端也获取不到音频信息。但 `pnpm run dev` 本地开发模式下一切正常。
 - **影响范围**: pkg 打包后的 exe
 - **可能方向**: pkg 打包后环境变量 `AUDIO_PIPE_MODE` 默认值可能走不到 wasapi 路径，或 pkg 环境下 WebSocket/broadcast 行为与 dev 模式有差异
-- **状态**: `open`
+- **状态**: `fixed` (2026-05-17, awaiting user verification)
+- **修复**: 
+  1. `ensureAudioPipe()` 不再无条件调用 `sendState('started')`，避免覆盖音频管道创建失败时发出的 `error` 状态
+  2. 为 `createFilePipe` 添加 `onStateChange` 回调，确保所有管道模式状态上报一致
+  3. pkg 配置中添加 `assets` 字段，显式包含 koffi 的 `.node` 原生模块和 opusscript 的 `.wasm` 文件
 
 ## Blockers / Risks | 阻塞项 / 风险
 
