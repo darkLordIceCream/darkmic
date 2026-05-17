@@ -21,6 +21,12 @@
     "qrcode": "^1.5.4",
     "ws": "^8.18.0"
   },
+  "pkg": {
+    "assets": [
+      "node_modules/koffi/build/koffi/**/*.node",
+      "node_modules/opusscript/build/opusscript_native_wasm.wasm"
+    ]
+  },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/qrcode": "^1.5.6",

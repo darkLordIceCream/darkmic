@@ -93,7 +93,7 @@ function decodeOpusToPcm(decoder: OpusScript | null, chunk: Buffer): Buffer | nu
 // ── Mode implementations ───────────────────────────────────────────
 
 /** Phase 1: Write framed raw opus chunks to a file on disk. */
-function createFilePipe(outputPath: string): AudioPipe {
+function createFilePipe(outputPath: string, onStateChange?: (s: AudioPipeState) => void): AudioPipe {
   const resolvedPath = resolve(outputPath);
   const stream: WriteStream = createWriteStream(resolvedPath, { flags: 'a' });
   let byteCount = 0;
@@ -101,6 +101,9 @@ function createFilePipe(outputPath: string): AudioPipe {
   stream.on('error', (err) => {
     console.error(`[AudioPipe:file] Write error: ${err.message}`);
   });
+
+  console.log(`[AudioPipe:file] Writing to ${resolvedPath}`);
+  onStateChange?.('started');
 
   return {
     mode: 'file',
@@ -111,6 +114,7 @@ function createFilePipe(outputPath: string): AudioPipe {
     },
     close() {
       stream.end();
+      onStateChange?.('stopped');
       console.log(
         `[AudioPipe:file] Saved ${byteCount} bytes of opus data to ${resolvedPath}`,
       );
@@ -279,14 +283,14 @@ export function createAudioPipe(options: AudioPipeOptions = {}): AudioPipe {
 
   switch (mode) {
     case 'file':
-      return createFilePipe(options.outputPath || './darkmic-audio.raw');
+      return createFilePipe(options.outputPath || './darkmic-audio.raw', onStateChange);
     case 'ffplay':
       return createFfplayPipe(ffmpegPath, onStateChange);
     case 'wasapi':
       return createWasapiPipe(cableDevice, onStateChange);
     default: {
       console.warn(`[AudioPipe] Unknown mode "${mode}", falling back to file`);
-      return createFilePipe(options.outputPath || './darkmic-audio.raw');
+      return createFilePipe(options.outputPath || './darkmic-audio.raw', onStateChange);
     }
   }
 }

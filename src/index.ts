@@ -175,7 +175,6 @@ wss.on('connection', (ws) => {
     });
 
     console.log(`Audio streaming started — pipe: ${audioPipe.mode}`);
-    sendState('started');
 
     return audioPipe;
   }
