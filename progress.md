@@ -2,12 +2,20 @@
 
 ## Current State | 当前状态
 
-**Last Updated | 最后更新:** 2026-05-16
-**Session | 会话:** F-007 — Windows pkg packaging (COMPLETE) | F-007 完成
+**Last Updated | 最后更新:** 2026-10-11
+**Session | 会话:** Repo sync — bug-001 fix branch merged back to main | 仓库同步——bug-001 修复分支合回 main
 **Active Feature | 当前功能:** F-008 next | F-008 下一步
-**Branch | 分支:** `feat/f-007-pkg-packaging`
+**Branch | 分支:** `main` @ 2c09a01
 
 ## Status | 状态
+
+### 2026-10-11 Session | 本次会话：仓库同步 + 架构确认
+
+- 本地 main 原停在 F-002 + README 优化（落后远程 41 个提交，工作区 audio.ts 还是 stub）。已 fast-forward 到 origin/main（544ad75，含 F-003~F-005 完整音频管线），再 fast-forward 合并 `origin/fix/bug-001-exe-uptime-audio`（2c09a01，含 F-007 打包 + BUG-001 修复）。历史保持线性，零冲突。
+- **架构结论（与用户确认）**: 目标是让电脑软件（微信/Zoom/OBS 等）把手机当麦克风。虚拟声卡是操作系统层面的必需环节——用户态程序（含 Node、含浏览器）没有任何 API 能把自己注册为系统音频输入设备，音频到达 PC 后只是进程内的字节，必须经虚拟声卡驱动才能进入系统麦克风列表。同类产品 WO Mic / DroidCam 均同方案。
+- **跨平台方向（暂不实施）**: 手机端 + 传输层已天然跨平台（纯浏览器能力）。如需支持 macOS/Linux，在现有 `AudioPipeMode` 抽象下增加输出适配器即可（macOS → BlackHole、Linux → PulseAudio/PipeWire 虚拟源）。注意各平台都无法省略"虚拟音频设备"这一概念，跨平台 ≠ 去掉虚拟声卡。
+- `.gitignore` 增加 `.zcode/`（编辑器会话产物，与 `.claude/` 同类）。
+- 验证：`./init.sh` 在合并后的代码上完整通过（install + typecheck + build + 音频管线测试 PASS）。
 
 ### What's Done | 已完成
 
@@ -78,7 +86,8 @@
 
 ### What's Next | 下一步
 
-1. **F-008**: Launcher UX + installer | 启动体验 + 安装程序
+- **F-008: Launcher UX + installer** (pending) | 启动体验 + 安装程序（待做）
+- **Cross-platform output adapters** (deferred, see 2026-10-11 session) | 跨平台输出适配（推迟）
 
 ## Known Bugs | 已知 Bug
 
@@ -133,25 +142,14 @@
 - **Chromium-only**: No cross-browser testing beyond Chromium-based browsers (Chrome, Edge, Brave, etc.).
 - **No TURN/STUN**: Local network only.
 - **pnpm**: Package manager.
+- **Virtual sound card retained (2026-10-11)**: Confirmed with user — the goal is a system-level microphone for PC apps. Userspace programs cannot register as OS audio input devices, so a virtual audio driver is mandatory on every platform. Cross-platform means per-OS output adapters (VB-Cable / BlackHole / PulseAudio), not removing the virtual device. | 架构确认：虚拟声卡不可省略；跨平台通过各系统输出适配器实现，而非去掉虚拟设备。
 - **F-004 PC management page**: `/` serves `pc.html` (management UI with QR code + log panel), `/phone` serves `index.html` (phone client). QR code generated client-side via `qrcode` npm package. PC page connects to same WebSocket for state/log push. | PC 管理页：`/` 提供管理界面，`/phone` 提供手机端，二维码通过 qrcode 包在浏览器端生成，PC 页通过同一 WebSocket 接收状态推送。
 
 ## Files Modified This Session | 本次修改的文件
 
-- `src/wasapi.ts` — New: WinMM waveOut output via koffi, targets VB-Cable by name, no FFmpeg needed | 新增文件
-- `src/audio.ts` — Phase 4: ffplay auto-restart (max 3), state change callbacks, updated createWasapiPipe to use WinMM | Phase 4 生产加固
-- `src/index.ts` — Phase 4: WebSocket state feedback to phone UI, onStateChange integration | 状态反馈
-- `package.json` — Added koffi dependency | 添加 koffi
-- `pnpm-lock.yaml` — Updated | 更新
-- `scripts/test-audio.ts` — Fix: TOCTOU (existsSync→try/catch), unused import | 修复 TOCTOU
-- `src/audio.ts` — Fix: capture proc local in write() to avoid stale reference | 修复 proc 引用竞态
-- `src/index.ts` — Fix: remove dead pipeState, type sendState param | 清理死代码，类型化参数
-- `.gitignore` — Add *.raw, .claude/, release/ | 忽略测试产物和本地配置
-- `src/cert.ts` — F-007: rewritten with Node.js crypto (no openssl), manual X.509 DER + RSA signing | F-007 重写：Node.js crypto 生成自签名证书
-- `src/index.ts` — F-007: appRoot() path resolution for pkg, VB-Cable check on startup + broadcast | F-007 路径解析 + VB-Cable 检测广播
-- `src/wasapi.ts` — F-007: export checkVBCable() for device presence detection | F-007 导出 VB-Cable 检测函数
-- `public/pc.html` — F-007: VB-Cable warning banner with download link | F-007 VB-Cable 未安装警告
-- `package.json` — F-007: @yao-pkg/pkg, pkg + package scripts | F-007 添加打包依赖和脚本
-- `scripts/package-release.mjs` — New: collects exe + public/ into release/ folder | 发布收集脚本
+- `.gitignore` — Add `.zcode/` (editor session artifacts, same class as `.claude/`) | 忽略编辑器会话产物
+- `progress.md` — This session's log and architecture decision | 本会话记录与架构决策
+- Git history: `main` fast-forwarded 98ead4a → 544ad75 (origin/main) → 2c09a01 (bug-001 fix branch), linear, no conflicts | main 快进合并，线性无冲突
 
 ## Evidence of Completion | 完成证据
 
@@ -165,12 +163,15 @@
 - [x] Auto-restart: spawnFfplay, max restarts=3, restarting/error state transitions | 自动重启已实现
 - [x] F-007: pkg exe builds + runs from release/, certs via Node.js crypto (no openssl), zero external deps | pkg 打包验证通过
 - [x] E2E phone → PC audio: real mobile device (Chromium) → VB-Cable verified | 手机端到端真实验证通过
-- [ ] Push to remote: HTTPS auth blocked in WSL | 推送到远端受阻
+- [x] 2026-10-11: `./init.sh` on merged main (2c09a01) — install + typecheck + build + audio pipeline test PASS | 合并后完整验证通过
+- [x] 2026-10-11: main pushed to origin (supersedes old WSL push blockage) | 推送成功（旧的 WSL 推送受阻已解决）
 
 ## Notes for Next Session | 下次会话备注
 
-- **Next feature**: F-004 Connection UX + QR code | 下一功能 F-004
-- **Branch**: Start from main (`git checkout -b feat/f-004-connection-ux`)
+- **Next feature**: F-008 Launcher UX + installer | 下一功能 F-008（启动体验 + 安装程序）
+- **Branch**: cut from `main` @ 2c09a01 (synced with remote 2026-10-11)
+- **Deferred direction**: cross-platform output adapters behind `AudioPipeMode` abstraction (macOS BlackHole / Linux PulseAudio virtual source) — see 2026-10-11 session notes | 推迟方向：在 AudioPipeMode 抽象下增加各系统输出适配
 - **Known risks**: See "Accepted Risks" section above for deferred low-priority issues | 已知风险见上方记录
 - **Windows prerequisites**: `winget install ffmpeg OpenSSL.Light` + [VB-Cable](https://vb-audio.com/Cable/)
 - **WaveOut device name note**: WinMM truncates device names to 31 chars. "CABLE Input (VB-Audio Virtual C" is the correct match.
+- **Remote branch note**: `origin/fix/bug-001-exe-uptime-audio` is fully merged into main (fast-forward); the remote branch can be deleted whenever desired | bug-001 远程分支已完整合入 main，可随时删除

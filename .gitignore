@@ -9,3 +9,4 @@ certs/
 *.raw
 .claude/
 release/
+.zcode/
