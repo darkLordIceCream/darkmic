@@ -9,6 +9,22 @@
 
 ## Status | 状态
 
+### 2026-11-14 (cont. 2) Session | 自主工程章程可行性评估 + 文档对齐
+
+**背景 | Context**: 用户提供 `darkmic-autonomous-engineering-goal.md`（自治工程章程，来自外部专家），要求先评估可行性。评估结论：整体可行，环境前提基本齐备——5 个子代理（QAInspector/CodeReviewer/ProductAdvisor/SecurityAuditor/UXDesigner）已注册且角色吻合、rustc 1.95.0 + cargo 已装、BlackHole2ch 驱动已装、ffmpeg/ffplay 已装（Homebrew）、Node v26.3.1。发现 3 处需修订的冲突。
+
+**修订落地（用户批准）| Revisions implemented (user-approved)**:
+- **AGENTS.md**: ① 约束条目 "Windows + VB-Cable. macOS not supported" → Windows 为主要目标平台、macOS 为一等公民开发/测试环境（现阶段 file/ffplay 模式支持，BlackHole 适配器规划于 F-015），跨平台 = 各系统输出适配器（与 2026-10-11 用户确认的决策一致，原条目过时）；② 顶部增加章程引用块；③ 启动流程加第 5 步（自主迭代时读章程与 decisions.md）；④ 必需工件清单加入 decisions.md。
+- **decisions.md（新建）**: 章程 §7H 要求的规范决策记录。迁移 progress.md 全部历史决策（标注 Active/Superseded），新增 5 项决策：D-001 章程采纳、D-002 macOS 一等公民、D-003 Rust 优先级修正、D-004 decisions.md 规范化、D-005 PENDING_WINDOWS_TEST 状态采纳。
+- **feature_list.json**: 新增 **F-015** "Rust audio-engine evaluation (output adapter first)"，依赖 F-008（排在安装器之后），not-started。关键修正：章程 §8 将 opus 解码列为 Rust 优先级 #1，但 opusscript 无实测瓶颈（48kHz mono、单连接、每帧亚毫秒），迁移它过不了章程自己的迁移规则 §3.5 → **首个落点改为输出适配器**（CPAL + BlackHole 消费 stdin PCM 的 ~100 行原型，复用 ffplay 管道模式做基准对比）；TypeScript 保留 opus 解码，规避 libopus C 依赖从 macOS ARM 交叉编译的风险。路线图 F-008–F-014 主线不变。
+- **progress.md**: 本条目 + Decisions 章节迁移指针。
+
+**验证 | Verification (2026-11-14)**:
+- `feature_list.json` JSON 解析通过（15 features，末项 F-015）。
+- `./init.sh` 完整通过（install + typecheck + build + 24/24 单测 + 音频管线测试）。
+
+**后续 | Next**: 主线不变——F-008 为下一实现项（F-009 等 BUG-001 真机验证闭环）；F-015 为排其后的低优先级评估流，切片 1 原型在 F-008 后可随时开工。未跟踪文件 `scripts/e2e-emulator.sh` 属上个会话产物，本次未纳入提交。
+
 ### 2026-11-14 Session | 本次会话：项目重评估 + 路线图 + F-009 稳定性收口
 
 **背景 | Context**: 用户要求对标 [MicYou](https://github.com/MicYou-Dev/MicYou)（4.5k star，Android Kotlin / iOS Swift 原生 App + Tauri 2 桌面端，Wi-Fi/USB 连接，AI 降噪/AEC/插件市场）重新评估本项目并制定路线图。**约束（不可变）**: 手机端仅浏览器零安装 + PC 端 VB-Cable。
@@ -175,6 +191,9 @@
 
 ## Decisions Made | 已做决策
 
+> **2026-11-14**: 决策记录已迁移至 `decisions.md`（章程 §7H 规范版本，含 Active/Superseded 状态标注）。以下为历史快照，新决策一律记入 `decisions.md`。
+> Decisions are now canonical in `decisions.md` (charter §7H, with Active/Superseded status). The list below is a historical snapshot; record new decisions in `decisions.md`.
+
 - **Transport: WebCodecs AudioEncoder + WebSocket**: Lower latency than MediaRecorder (~80ms vs ~150ms). WebRTC deferred to F-006.
   > Phase 1 采用 WebCodecs AudioEncoder + WebSocket
 - **Decoding strategy: opusscript (pure JS) → PCM → ffplay**: Instead of FFmpeg raw opus demuxer (not available in Gyan build) or @discordjs/opus (needs native compilation). Pure JS avoids Python/C++ build toolchain dependency.
@@ -223,6 +242,7 @@
 
 ## Notes for Next Session | 下次会话备注
 
+- **Charter adopted (2026-11-14)**: `darkmic-autonomous-engineering-goal.md` is the operating charter; AGENTS.md aligned (macOS first-class, cross-platform via per-OS adapters); decisions created. **F-015** (Rust output-adapter eval, dep F-008) is the low-priority parallel stream — slice 1 = CPAL + BlackHole stdin-PCM prototype vs ffplay-mode benchmarks. | 章程已采纳并对齐文档；F-015 为 F-008 之后的低优先级评估流。
 - **Roadmap (approved 2026-11-14)**: Phase 0 F-009 stability (in-progress, awaiting real-machine check) → Phase 1 **F-008 installer/launcher (next implementation)** → Phase 2 F-010 phone reliability (Wake Lock/PWA/reconnect) → Phase 3 F-011 browser DSP → Phase 4 F-012 real latency + monitoring → Phase 5 F-013 tuning + WebRTC decision gate → Phase 6 F-014 WASM AI denoising. Backlog: cross-platform adapters, soundpad, plugins, i18n, multi-phone. | 路线图已批准，下一实现项为 F-008。
 - **F-009 completion condition**: real-machine BUG-001 verification (user) → flip F-009 + BUG-001 to done | F-009 完成条件：用户真机验证 BUG-001 后转 done。
 - **Config precedence**: defaults ← config.json (exe/project root, gitignored) ← env (PORT / AUDIO_PIPE_MODE). Invalid values warn, never crash. | 配置优先级与容错行为。

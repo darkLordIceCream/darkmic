@@ -139,6 +139,16 @@
       "dependencies": ["F-011"],
       "status": "not-started",
       "evidence": ""
+    },
+    {
+      "id": "F-015",
+      "name": "Rust audio-engine evaluation (output adapter first)",
+      "nameZh": "Rust 音频引擎评估（输出适配器优先）",
+      "description": "Parallel low-priority evaluation workstream from the autonomous engineering charter §3/§8 (decisions D-003); roadmap F-008–F-014 remains the main line. Priority correction vs charter §8: first Rust target is the audio OUTPUT adapter, not opus decode — opusscript decode has no measured bottleneck (48kHz mono, single connection, sub-ms per frame), so migrating it would fail the charter's own migration rule §3.5. Slice 1: ~100-line Rust prototype (CPAL) consuming s16le PCM on stdin → BlackHole (macOS), reusing the proven ffplay stdin-pipe pattern (src/audio.ts), benchmarked against ffplay mode per charter §8 (latency/CPU/memory, hardware + conditions documented). Rust owns output adapters; TypeScript keeps opus decode (avoids libopus C cross-compile risk from macOS ARM). Option A (stdin/IPC subprocess) vs Option B (N-API) compared before any commitment; Windows cross-compile and packaging complexity (single-exe trade-off) are explicit benchmark dimensions. Retain TypeScript wherever measurable benefit is absent.",
+      "descriptionZh": "自主工程章程 §3/§8 的并行低优先级评估工作流（决策 D-003）；主线不变：F-008–F-014。对章程 §8 的优先级修正：Rust 首个落点为音频输出适配器而非 opus 解码——opusscript 解码无实测瓶颈（48kHz 单声道、单连接、每帧亚毫秒），迁移它过不了章程自己的迁移规则 §3.5。切片 1：约 100 行 Rust 原型（CPAL），从 stdin 消费 s16le PCM → BlackHole（macOS），复用已验证的 ffplay stdin 管道模式（src/audio.ts），按章程 §8 与 ffplay 模式基准对比（延迟/CPU/内存，记录硬件与条件）。Rust 负责输出适配器，TypeScript 保留 opus 解码（规避从 macOS ARM 交叉编译 libopus C 依赖的风险）。选型前先做 Option A（stdin/IPC 子进程）与 Option B（N-API）对比；Windows 交叉编译与打包复杂度（单 exe 取舍）作为显式基准维度。无实测收益则保留 TypeScript。",
+      "dependencies": ["F-008"],
+      "status": "not-started",
+      "evidence": ""
     }
   ]
 }

@@ -4,6 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) and other AI coding 
 
 > 本文档为 AI 编码代理（Claude Code 等）提供项目指导，替代通常的 CLAUDE.md。
 
+> 自主工程章程：`darkmic-autonomous-engineering-goal.md` —— macOS 一等开发/测试环境、TypeScript+Rust 渐进混合（Rust 从输出适配器切入，非 opus 解码）、`PENDING_WINDOWS_TEST` 状态、子代理协作、决策记录在 `decisions.md`。
+> Autonomous engineering charter: `darkmic-autonomous-engineering-goal.md` — macOS as first-class dev/test environment, progressive TypeScript+Rust hybrid (Rust starts with output adapters, not opus decode), `PENDING_WINDOWS_TEST` status, sub-agent collaboration, decisions recorded in `decisions.md`.
+
 Phone-as-microphone for PC via Chromium-based browser. Mobile device captures mic audio via `getUserMedia` → streams over local network → PC receives and pipes to virtual audio device (VB-Cable).
 
 > 手机做电脑麦克风。移动设备 Chromium 内核浏览器采集麦克风音频 → 局域网传输 → Windows 电脑接收并输出到虚拟声卡 (VB-Cable)。
@@ -108,7 +111,7 @@ darkmic/
 - **Chromium-based browsers only** (Chrome, Edge, Brave, Opera, etc.) on both mobile and PC. No Firefox/Safari. | 仅支持 Chromium 内核浏览器（Chrome/Edge/Brave/Opera 等），不支持 Firefox/Safari
 - **Local network only** — same subnet, no STUN/TURN. | 仅局域网，不处理 NAT 穿透
 - **HTTPS required** — self-signed certs auto-generated via Node.js crypto. | 必须 HTTPS，自签名证书通过 Node.js crypto 自动生成
-- **Windows + VB-Cable**. macOS not supported. | Windows 平台 + VB-Cable 虚拟声卡，不支持 macOS
+- **Windows is the primary target platform** (VB-Cable via WinMM, pkg exe). **macOS is the primary development and integration-testing environment** — first-class, currently served by file/ffplay modes; BlackHole output adapter planned in F-015. Cross-platform = per-OS output adapters (VB-Cable / BlackHole / PulseAudio); the virtual audio device itself is mandatory (2026-10-11 decision). | Windows 为主要目标平台（VB-Cable + pkg exe），macOS 为主要开发与集成测试环境（一等公民，现阶段经 file/ffplay 模式支持，BlackHole 适配器规划于 F-015）。跨平台通过各系统输出适配器实现，虚拟声卡本身不可省略
 - **FFmpeg not required** for default wasapi mode (WinMM handles output). ffplay mode and test scripts still need ffmpeg on PATH. | wasapi 模式不需要 FFmpeg（WinMM 直接输出），ffplay 模式和测试脚本需要
 
 ## Startup Workflow | 启动流程
@@ -119,6 +122,7 @@ Before writing code — 开始编码前：
 2. **Run `./init.sh`** to verify environment is healthy | 运行 `./init.sh` 验证环境
 3. **Read `feature_list.json`** for current feature state | 阅读功能列表确认当前状态
 4. **Review recent commits** with `git log --oneline -5` | 查看最近提交
+5. **Read `darkmic-autonomous-engineering-goal.md`** (charter) and `decisions.md` when doing autonomous iterations | 自主迭代时阅读工程章程与决策记录
 
 If baseline verification fails, repair it first before adding new scope.
 > 如果基础验证失败，先修好再开始新功能。
@@ -142,6 +146,7 @@ If baseline verification fails, repair it first before adding new scope.
 
 - `feature_list.json` — Feature state tracker (source of truth) | 功能状态追踪（事实来源）
 - `progress.md` — Session continuity log | 会话连续性日志
+- `decisions.md` — Architecture decision record (canonical) | 架构决策记录（规范版本）
 - `init.sh` — Standard startup and verification path | 标准启动和验证脚本
 
 ## Definition of Done | 完成定义
