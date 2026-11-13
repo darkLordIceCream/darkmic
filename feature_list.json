@@ -54,8 +54,8 @@
       "id": "F-006",
       "name": "WebRTC P2P transport (optional)",
       "nameZh": "WebRTC P2P 传输（可选）",
-      "description": "Replace AudioEncoder + WS with RTCPeerConnection for lower latency. Phone sends MediaStreamTrack directly. Server uses werift (TS WebRTC) to receive. Keep WS for signaling only.",
-      "descriptionZh": "将 MediaRecorder + WebSocket 替换为 RTCPeerConnection 以降低延迟。手机直接发送 MediaStreamTrack，服务端通过 werift 接收，WebSocket 仅用于信令",
+      "description": "Replace AudioEncoder + WS with RTCPeerConnection for lower latency. Phone sends MediaStreamTrack directly. Server uses werift (TS WebRTC) to receive. Keep WS for signaling only. Re-evaluated 2026-11-14: demoted to a decision gate inside F-013 — only implement if measured end-to-end latency stays >100ms after buffer/encoding tuning. Still compatible with the browser-only constraint (WebRTC is a browser capability).",
+      "descriptionZh": "将 AudioEncoder + WebSocket 替换为 RTCPeerConnection 以降低延迟。手机直接发送 MediaStreamTrack，服务端通过 werift 接收，WebSocket 仅用于信令。2026-11-14 重评估：降级为 F-013 内的决策门——缓冲/编码调优后实测端到端延迟仍 >100ms 才实施。与手机零安装约束兼容（WebRTC 是浏览器能力）",
       "dependencies": ["F-004"],
       "status": "deferred",
       "evidence": ""
@@ -74,9 +74,69 @@
       "id": "F-008",
       "name": "Launcher UX + installer",
       "nameZh": "启动体验 + 安装程序",
-      "description": "Add .bat launcher or NSIS/InnoSetup installer for Windows. Show console window with server status and QR code URL. Optionally add system tray icon for quick controls.",
-      "descriptionZh": "添加 bat 启动器或 NSIS/InnoSetup 安装程序。控制台窗口显示服务器状态和二维码 URL。可选添加系统托盘图标",
+      "description": "Add .bat launcher or NSIS/InnoSetup installer for Windows. Show console window with server status and QR code URL. Optionally add system tray icon for quick controls. Roadmap: Phase 1 (productization).",
+      "descriptionZh": "添加 bat 启动器或 NSIS/InnoSetup 安装程序。控制台窗口显示服务器状态和二维码 URL。可选添加系统托盘图标。路线图：Phase 1（产品化）",
       "dependencies": ["F-007"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "F-009",
+      "name": "Stability hardening: silent failures + config.json + unit tests",
+      "nameZh": "稳定性收口：静默失败修复 + config.json + 单元测试",
+      "description": "Phase 0 of the 2026-11-14 roadmap. 1) Surface silent failure paths: opus decode failures logged (rate-limited) with summary at close; waveOutPrepareHeader/Write failures logged with MMRESULT; file pipe gets closed guard + error state broadcast. 2) config.json support (port, audioPipeMode, initialBitrate) with env-var precedence, validated with warnings — replaces the unsafe 'as AudioPipeMode' cast. 3) Minimal vitest suite: pipe factory dispatch, opus decode behavior, PcmChunker buffer/starvation logic, config loading. Remaining sub-item: real-machine verification of the BUG-001 fix (needs Windows exe + phone).",
+      "descriptionZh": "2026-11-14 路线图 Phase 0。1) 修复静默失败路径：opus 解码失败限频记录并在关闭时汇总；waveOutPrepareHeader/Write 失败记录 MMRESULT；file 模式补 closed guard + 错误状态广播。2) config.json 支持（port、audioPipeMode、initialBitrate），环境变量优先，无效值警告回退——替换不安全的 'as AudioPipeMode' 强转。3) 最小 vitest 测试套件：pipe 工厂分发、opus 解码行为、PcmChunker 缓冲/饥饿裁剪逻辑、config 加载。剩余子项：BUG-001 修复的真机验证（需 Windows exe + 手机）",
+      "dependencies": ["F-003"],
+      "status": "in-progress",
+      "evidence": "Automated: vitest 24/24 pass (test/audio-pipe.test.ts, test/wasapi-chunker.test.ts, test/config.test.ts); typecheck + build clean; ./init.sh full pass (2026-11-14); runtime smoke test: config.json loaded (port 3199/audioPipeMode file/initialBitrate 48000 all effective), invalid env value warned. Remaining: BUG-001 real-machine E2E — user to run release exe, phone stop → uptime freezes + audio closes (tracked in progress.md BUG-001)."
+    },
+    {
+      "id": "F-010",
+      "name": "Phone reliability: Wake Lock + PWA + reconnect hardening",
+      "nameZh": "手机端可靠性：Wake Lock + PWA + 重连强化",
+      "description": "Phase 2 of the 2026-11-14 roadmap — core to the zero-install promise. Screen Wake Lock API while streaming (release on stop, re-acquire on visibilitychange). Verify lock-screen/background behavior on real devices and record findings. PWA: manifest + service worker for add-to-home-screen full-screen operation. Reconnect hardening: immediate reconnect on visibilitychange/online events (skip backoff), auto-resume capture after recovery.",
+      "descriptionZh": "2026-11-14 路线图 Phase 2——零安装承诺的核心。采集期间申请 Screen Wake Lock（停止释放、页面可见时重新申请）。真机验证锁屏/后台行为并记录结论。PWA：manifest + service worker，支持添加到主屏幕全屏运行。重连强化：visibilitychange/online 事件触发立即重连（跳过退避计时），恢复后自动续采",
+      "dependencies": ["F-009"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "F-011",
+      "name": "Browser-side audio DSP",
+      "nameZh": "浏览器端音频 DSP",
+      "description": "Phase 3 of the 2026-11-14 roadmap — all phone-side, browser capability only. Mic device selection (enumerateDevices + applyConstraints). EQ via BiquadFilter chain (80Hz highpass cut + adjustable lowshelf/peaking/highshelf) after AGC, before encoding. Noise gate via AudioWorklet (adjustable RMS threshold). Level meter via AnalyserNode shown on phone + broadcast to dashboard every 500ms. Settings panel persisted in localStorage (AGC/EQ/gate/echo-cancellation toggles).",
+      "descriptionZh": "2026-11-14 路线图 Phase 3——全部手机端，仅浏览器能力。麦克风设备选择（enumerateDevices + applyConstraints）。EQ：BiquadFilter 链（80Hz 低切 + 可调 lowshelf/peaking/highshelf），插在 AGC 后编码前。噪声门：AudioWorklet 实现（可调 RMS 门限）。电平表：AnalyserNode，手机端显示并每 500ms 广播到仪表盘。设置面板 localStorage 持久化（AGC/EQ/噪声门/回声消除开关）",
+      "dependencies": ["F-010"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "F-012",
+      "name": "Real E2E latency measurement + monitoring",
+      "nameZh": "真实端到端延迟测量 + 监控增强",
+      "description": "Phase 4 of the 2026-11-14 roadmap. Replace the WS RTT/2 approximation with real audio-path latency (send timestamps attached per chunk, aligned at decode time); dashboard distinguishes signaling RTT vs audio latency. New dashboard metrics: jitter (arrival interval variance), bitrate history graph (canvas), buffer watermark (wasapi accumulator via WasapiOutput.stats()). Mute button (phone ↔ dashboard messages) + PC speaker monitoring (tap output reusing ffplay mode capability).",
+      "descriptionZh": "2026-11-14 路线图 Phase 4。用真实音频链路延迟替换 WS RTT/2 近似（编码帧附发送时间戳，解码时刻对齐计算）；仪表盘区分信令 RTT 与音频延迟。新增指标：抖动（到达间隔方差）、码率历史曲线（canvas）、缓冲水位（wasapi 累积器，经 WasapiOutput.stats()）。静音按钮（手机 ↔ 仪表盘互发消息）+ PC 扬声器监听（复用 ffplay 模式能力做 tap 输出）",
+      "dependencies": ["F-011"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "F-013",
+      "name": "Latency tuning + WebRTC decision gate",
+      "nameZh": "延迟优化 + WebRTC 决策门",
+      "description": "Phase 5 of the 2026-11-14 roadmap. Based on F-012 real measurements: wasapi buffer 6×50ms → adaptive (target 100-150ms upper bound); opus frameDuration tuning (10ms→5ms trial) and bitrate probe up to 96kbps. Decision gate: if measured end-to-end latency still >100ms, implement F-006 (werift + RTCPeerConnection, WS signaling only, phone stays browser-only); otherwise close F-006 as not-needed.",
+      "descriptionZh": "2026-11-14 路线图 Phase 5。基于 F-012 的真实数据：wasapi 缓冲 6×50ms → 自适应（目标 100-150ms 上限）；opus frameDuration 调优（10ms→5ms 试验）与码率上探 96kbps。决策门：实测端到端延迟仍 >100ms 则实施 F-006（werift + RTCPeerConnection，WS 仅信令，手机端保持纯浏览器）；否则关闭 F-006 标记为不需要",
+      "dependencies": ["F-012"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "F-014",
+      "name": "AI noise reduction via WASM (browser-side)",
+      "nameZh": "浏览器端 AI 降噪（WASM）",
+      "description": "Phase 6 of the 2026-11-14 roadmap — differentiator highlight vs MicYou's native AI denoising. WASM RNNoise (~1MB, <10ms inference per frame, mobile-friendly) running in a phone-side AudioWorklet as an optional node before the EQ chain. Traditional NS (getUserMedia built-in) vs AI denoising comparable via toggles. Weak-device detection (decoder performance probe) with graceful degradation hint.",
+      "descriptionZh": "2026-11-14 路线图 Phase 6——对标 MicYou 原生 AI 降噪的差异化亮点。WASM RNNoise（约 1MB，每帧推理 <10ms，适合移动端）跑在手机端 AudioWorklet，作为 EQ 链前置的可开关节点。传统 NS（getUserMedia 自带）与 AI 降噪可对比开关。弱设备检测（性能探针）自动降级提示",
+      "dependencies": ["F-011"],
       "status": "not-started",
       "evidence": ""
     }

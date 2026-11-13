@@ -19,6 +19,8 @@ let rawStream = null;
 let pingTimer = null;
 let latencyMs = 0;
 let currentBitrate = 32000;
+// Starting bitrate pushed by the server via {type:'config'} (config.json, F-009)
+let serverInitialBitrate = 32000;
 let lastBitrateSwitch = 0;
 
 // ── Reconnect ────────────────────────────────────────────────────
@@ -109,13 +111,9 @@ async function connectAndStream() {
     ws = new WebSocket(`wss://${location.host}`);
     ws.binaryType = 'arraybuffer';
 
-    await new Promise((resolve, reject) => {
-      ws.onopen = resolve;
-      ws.onerror = () => reject(new Error('WebSocket connection failed'));
-      // Timeout after 10s
-      setTimeout(() => reject(new Error('Connection timed out')), 10000);
-    });
-
+    // Register the message handler BEFORE awaiting open: the server sends
+    // config/url/vbcable right after connection, and a handler assigned
+    // only after the open promise resolves would miss them.
     ws.onmessage = (event) => {
       if (typeof event.data === 'string') {
         try {
@@ -130,10 +128,19 @@ async function connectAndStream() {
             if (ws && ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: 'latency', ms: Math.round(latencyMs / 2) }));
             }
+          } else if (msg.type === 'config' && typeof msg.initialBitrate === 'number') {
+            serverInitialBitrate = msg.initialBitrate;
           }
         } catch { /* ignore */ }
       }
     };
+
+    await new Promise((resolve, reject) => {
+      ws.onopen = resolve;
+      ws.onerror = () => reject(new Error('WebSocket connection failed'));
+      // Timeout after 10s
+      setTimeout(() => reject(new Error('Connection timed out')), 10000);
+    });
 
     ws.onclose = () => {
       if (isRunning) {
@@ -151,7 +158,7 @@ async function connectAndStream() {
     // 3. Create AudioEncoder (opus) — re-create on every reconnect
     chunkCount = 0;
     byteCount = 0;
-    currentBitrate = 32000;
+    currentBitrate = serverInitialBitrate;
     lastBitrateSwitch = 0;
 
     encoder = new AudioEncoder({
@@ -175,7 +182,7 @@ async function connectAndStream() {
       codec: 'opus',
       sampleRate: 48000,
       numberOfChannels: 1,
-      bitrate: 32000,
+      bitrate: currentBitrate,
     });
 
     // 4. Wire up MediaStreamTrack → AudioData frames

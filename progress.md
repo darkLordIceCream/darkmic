@@ -2,12 +2,40 @@
 
 ## Current State | 当前状态
 
-**Last Updated | 最后更新:** 2026-10-11
-**Session | 会话:** Repo sync — bug-001 fix branch merged back to main | 仓库同步——bug-001 修复分支合回 main
-**Active Feature | 当前功能:** F-008 next | F-008 下一步
-**Branch | 分支:** `main` @ 2c09a01
+**Last Updated | 最后更新:** 2026-11-14
+**Session | 会话:** Project re-evaluation vs MicYou + roadmap approved + Phase 0 stability hardening (F-009) | 项目对标 MicYou 重评估 + 路线图批准 + Phase 0 稳定性收口
+**Active Feature | 当前功能:** F-009 in-progress (real-machine BUG-001 verification outstanding); next: F-008 | F-009 进行中（真机验证待用户），下一步 F-008
+**Branch | 分支:** `main`
 
 ## Status | 状态
+
+### 2026-11-14 Session | 本次会话：项目重评估 + 路线图 + F-009 稳定性收口
+
+**背景 | Context**: 用户要求对标 [MicYou](https://github.com/MicYou-Dev/MicYou)（4.5k star，Android Kotlin / iOS Swift 原生 App + Tauri 2 桌面端，Wi-Fi/USB 连接，AI 降噪/AEC/插件市场）重新评估本项目并制定路线图。**约束（不可变）**: 手机端仅浏览器零安装 + PC 端 VB-Cable。
+
+**评估结论 | Assessment**:
+- 差异化不在功能广度，而在**连接体验的极致简单**——MicYou 的 Web 模式只是次要入口，我们的浏览器模式是唯一入口，必须把"打开网页即用、断线自愈、锁屏不断采"做到极致。
+- WebRTC（F-006）降级为决策门：浏览器能力、零安装不变，但 ~80ms 未证明不达标；先做真实延迟测量（F-012）+ 缓冲调优（F-013），实测 >100ms 才实施。
+- AI 降噪（WASM RNNoise in AudioWorklet，F-014）为后期差异化亮点；跨平台维持 Windows 优先（backlog）。
+
+**路线图（已批准）| Roadmap (approved)**: Phase 0 F-009 稳定性收口 → Phase 1 F-008 安装器 → Phase 2 F-010 手机端可靠性（Wake Lock/PWA/重连）→ Phase 3 F-011 浏览器 DSP（EQ/噪声门/电平表）→ Phase 4 F-012 真实延迟测量+监控 → Phase 5 F-013 延迟调优+WebRTC 决策门 → Phase 6 F-014 AI 降噪。Backlog：跨平台适配器、soundpad、插件系统、多语言、多手机连接。
+
+**本次实施 | Implemented (F-009)**:
+- `src/config.ts`（新增）: config.json 可选加载（port / audioPipeMode / initialBitrate），env 优先，无效值警告回退；消除 `index.ts` 的 `as AudioPipeMode` 强转。WS 连接时下发 `{type:'config', initialBitrate}`，`public/client.js` 据此设置编码器初始码率；`ws.onmessage` 注册移至 await open 之前（避免丢失服务端连接后立即发送的消息）。
+- `src/audio.ts`: opus 解码失败不再静默——限频日志（首次详录 + 每 50 次计数 + 关闭时汇总）；file 模式补 closed guard、close 幂等、写盘错误广播 error 状态。
+- `src/wasapi.ts`: waveOutPrepareHeader/Write 失败记录 MMRESULT（原先静默 return）；抽出纯逻辑 `PcmChunker` 类（累积/切片/饥饿裁剪，零 WinMM 依赖，可单测）；`WasapiOutput.stats()` 暴露 submittedBytes/pendingBytes/starvedBytes（为 F-012 缓冲水位指标预留）。
+- 测试: `test/audio-pipe.test.ts`（工厂分发/未知模式回退/帧格式/状态机/closed guard/opus 编解码 roundtrip）、`test/wasapi-chunker.test.ts`（部分缓冲/精确切片/freeSlots 上限/内容顺序/饥饿裁剪最旧优先/flush/饥饿后恢复）、`test/config.test.ts`（默认值/读取/无效回退/部分无效/未知字段/坏 JSON/env 覆盖/无效 env）。`package.json` 加 `"test": "vitest run"`（vitest 5.1.0），`init.sh` 加入单元测试步骤。
+- `.gitignore` 加 `config.json`（机器本地配置）。
+
+**验证 | Verification (2026-11-14)**:
+- `vitest run`: **24/24 通过**。
+- `pnpm run typecheck` + `pnpm run build`: 干净通过。
+- `./init.sh`: 完整通过（install + typecheck + build + 单测 + 音频管线测试）。
+- 运行时冒烟测试: 临时 config.json（port 3199 / audioPipeMode file / initialBitrate 48000）→ 日志确认三项全部生效；`PORT=` 空值触发 `Invalid port` 警告路径；服务器正常启动后清理。
+
+**待办 | Outstanding**:
+- **BUG-001 真机验证（用户操作）**: Windows 上双击 release exe → 手机连接 → 点停止 → 确认 uptime 停止计时且音频关闭；恢复再停止重复一次。通过后 BUG-001 与 F-009 均转 done。
+- F-008（Phase 1）为下一实现项。
 
 ### 2026-10-11 Session | 本次会话：仓库同步 + 架构确认
 
@@ -165,13 +193,18 @@
 - [x] E2E phone → PC audio: real mobile device (Chromium) → VB-Cable verified | 手机端到端真实验证通过
 - [x] 2026-10-11: `./init.sh` on merged main (2c09a01) — install + typecheck + build + audio pipeline test PASS | 合并后完整验证通过
 - [x] 2026-10-11: main pushed to origin (supersedes old WSL push blockage) | 推送成功（旧的 WSL 推送受阻已解决）
+- [x] 2026-11-14: `vitest run` — 24/24 tests pass (audio-pipe / wasapi-chunker / config suites) | 单元测试全通过
+- [x] 2026-11-14: `pnpm run typecheck` + `pnpm run build` — clean | 类型检查与构建通过
+- [x] 2026-11-14: `./init.sh` full pass — now includes unit test step | 完整验证通过（已含单测步骤）
+- [x] 2026-11-14: Runtime smoke test — config.json values effective (port 3199 / file mode / 48000bps), invalid env warned, server boots clean | 运行时冒烟测试通过
+- [ ] 2026-11-14: BUG-001 real-machine E2E (exe on Windows + phone stop → uptime freeze + audio close) — awaiting user verification | BUG-001 真机验证待用户执行
 
 ## Notes for Next Session | 下次会话备注
 
-- **Next feature**: F-008 Launcher UX + installer | 下一功能 F-008（启动体验 + 安装程序）
-- **Branch**: cut from `main` @ 2c09a01 (synced with remote 2026-10-11)
-- **Deferred direction**: cross-platform output adapters behind `AudioPipeMode` abstraction (macOS BlackHole / Linux PulseAudio virtual source) — see 2026-10-11 session notes | 推迟方向：在 AudioPipeMode 抽象下增加各系统输出适配
-- **Known risks**: See "Accepted Risks" section above for deferred low-priority issues | 已知风险见上方记录
-- **Windows prerequisites**: `winget install ffmpeg OpenSSL.Light` + [VB-Cable](https://vb-audio.com/Cable/)
-- **WaveOut device name note**: WinMM truncates device names to 31 chars. "CABLE Input (VB-Audio Virtual C" is the correct match.
-- **Remote branch note**: `origin/fix/bug-001-exe-uptime-audio` is fully merged into main (fast-forward); the remote branch can be deleted whenever desired | bug-001 远程分支已完整合入 main，可随时删除
+- **Roadmap (approved 2026-11-14)**: Phase 0 F-009 stability (in-progress, awaiting real-machine check) → Phase 1 **F-008 installer/launcher (next implementation)** → Phase 2 F-010 phone reliability (Wake Lock/PWA/reconnect) → Phase 3 F-011 browser DSP → Phase 4 F-012 real latency + monitoring → Phase 5 F-013 tuning + WebRTC decision gate → Phase 6 F-014 WASM AI denoising. Backlog: cross-platform adapters, soundpad, plugins, i18n, multi-phone. | 路线图已批准，下一实现项为 F-008。
+- **F-009 completion condition**: real-machine BUG-001 verification (user) → flip F-009 + BUG-001 to done | F-009 完成条件：用户真机验证 BUG-001 后转 done。
+- **Config precedence**: defaults ← config.json (exe/project root, gitignored) ← env (PORT / AUDIO_PIPE_MODE). Invalid values warn, never crash. | 配置优先级与容错行为。
+- **Branch**: `main`; keep linear history | 分支 main，保持线性历史
+- **Windows prerequisites**: [VB-Cable](https://vb-audio.com/Cable/) (wasapi mode needs it; FFmpeg only for ffplay mode / test scripts) | Windows 前置依赖
+- **WaveOut device name note**: WinMM truncates device names to 31 chars. "CABLE Input (VB-Audio Virtual C" is the correct match. | 设备名截断匹配
+- **PcmChunker**: pure buffer logic lives in `src/wasapi.ts`; `WasapiOutput.stats()` (submitted/pending/starved bytes) is ready for F-012 dashboard metrics | 缓冲遥测已为 F-012 预留

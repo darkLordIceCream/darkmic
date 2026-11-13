@@ -5,6 +5,7 @@ dist/
 *.key
 certs/
 .env
+config.json
 *.log
 *.raw
 .claude/

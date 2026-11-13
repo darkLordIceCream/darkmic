@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 import { WebSocketServer, WebSocket } from 'ws';
 import { loadOrCreateCertificates } from './cert.js';
-import { createAudioPipe, type AudioPipeMode, type AudioPipeState, type AudioPipe } from './audio.js';
+import { createAudioPipe, type AudioPipeState, type AudioPipe } from './audio.js';
+import { loadConfig } from './config.js';
 import { checkVBCable } from './wasapi.js';
 
 function appRoot(): string {
@@ -22,13 +23,15 @@ const app = express();
 const server = createServer({ key: certs.key, cert: certs.cert }, app);
 const wss = new WebSocketServer({ server, maxPayload: 100 * 1024 });
 
-const port = parseInt(process.env.PORT || '3000', 10);
-
-const audioMode = (process.env.AUDIO_PIPE_MODE || 'wasapi') as AudioPipeMode;
+// F-009: config.json (optional) + env overrides, validated with warnings
+const config = loadConfig(appRoot());
+const port = config.port;
+const audioMode = config.audioPipeMode;
 
 const vbcableInstalled = checkVBCable();
 
 console.log(`Audio pipe mode: ${audioMode}`);
+console.log(`Initial bitrate: ${config.initialBitrate} bps`);
 if (audioMode !== 'file') {
   console.log(`  (set AUDIO_PIPE_MODE=file for safe logging only)`);
 }
@@ -148,11 +151,12 @@ function broadcast(msg: Record<string, unknown>) {
 wss.on('connection', (ws) => {
   clients.add(ws);
 
-  // Send LAN URL and VB-Cable status immediately
+  // Send LAN URL, VB-Cable status and encoder config immediately
   const lanUrl = getLanUrl();
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: 'url', url: lanUrl || '' }));
     ws.send(JSON.stringify({ type: 'vbcable', installed: vbcableInstalled }));
+    ws.send(JSON.stringify({ type: 'config', initialBitrate: config.initialBitrate }));
   }
 
   let audioPipeActive = false;

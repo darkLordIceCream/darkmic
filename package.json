@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "start": "node dist/index.js",
+    "test": "vitest run",
     "test:audio": "tsx scripts/test-audio.ts",
     "pkg": "pnpm exec pkg dist/index.js --targets node20-win-x64 --output dist/darkmic.exe",
     "package": "pnpm build && pnpm run pkg && node scripts/package-release.mjs"
@@ -33,6 +34,7 @@
     "@types/ws": "^8.5.0",
     "@yao-pkg/pkg": "^6.19.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^5.1.0"
   }
 }

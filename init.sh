@@ -18,6 +18,9 @@ pnpm run typecheck
 echo "--- Building | 构建 ---"
 pnpm run build
 
+echo "--- Unit tests | 单元测试 ---"
+pnpm test
+
 echo "--- Audio pipeline test | 音频管线测试 ---"
 pnpm test:audio 2>/dev/null || echo "(audio test skipped — no audio device or cross-platform env | 无音频设备或跨平台环境)"
 

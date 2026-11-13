@@ -80,14 +80,50 @@ function createOpusDecoder(): OpusScript | null {
 /**
  * Decode a raw opus packet to s16le PCM.
  * Returns null if decoding fails (malformed packet, decoder not ready).
+ * Malformed packets are dropped (documented behavior), but the failure
+ * is reported via `onDecodeError` so it can be logged — previously this
+ * was a silent empty catch that made audio problems impossible to debug.
+ * Exported for unit testing.
  */
-function decodeOpusToPcm(decoder: OpusScript | null, chunk: Buffer): Buffer | null {
+export function decodeOpusToPcm(
+  decoder: OpusScript | null,
+  chunk: Buffer,
+  onDecodeError?: (err: Error) => void,
+): Buffer | null {
   if (!decoder) return null;
   try {
     return Buffer.from(decoder.decode(chunk));
-  } catch {
+  } catch (err: unknown) {
+    onDecodeError?.(err instanceof Error ? err : new Error(String(err)));
     return null;
   }
+}
+
+/**
+ * Rate-limited decode failure logger.
+ * Logs the first failure in detail, then a running count every 50,
+ * plus a final total at close. A single malformed packet stays quiet;
+ * a systematic decode problem becomes visible in the log.
+ */
+function createDecodeFailureLogger(pipeLabel: string) {
+  let failures = 0;
+  return {
+    report(err: Error, chunkLen: number) {
+      failures++;
+      if (failures === 1) {
+        console.error(
+          `[AudioPipe:${pipeLabel}] opus decode failed (len=${chunkLen}): ${err.message} — packet dropped`,
+        );
+      } else if (failures % 50 === 0) {
+        console.warn(`[AudioPipe:${pipeLabel}] opus decode failures so far: ${failures}`);
+      }
+    },
+    summary() {
+      if (failures > 0) {
+        console.warn(`[AudioPipe:${pipeLabel}] total opus decode failures: ${failures}`);
+      }
+    },
+  };
 }
 
 // ── Mode implementations ───────────────────────────────────────────
@@ -97,9 +133,16 @@ function createFilePipe(outputPath: string, onStateChange?: (s: AudioPipeState) 
   const resolvedPath = resolve(outputPath);
   const stream: WriteStream = createWriteStream(resolvedPath, { flags: 'a' });
   let byteCount = 0;
+  let closed = false;
+  let errored = false;
 
   stream.on('error', (err) => {
     console.error(`[AudioPipe:file] Write error: ${err.message}`);
+    // Surface disk failures to the UI instead of only logging them.
+    if (!errored && !closed) {
+      errored = true;
+      onStateChange?.('error');
+    }
   });
 
   console.log(`[AudioPipe:file] Writing to ${resolvedPath}`);
@@ -108,11 +151,14 @@ function createFilePipe(outputPath: string, onStateChange?: (s: AudioPipeState) 
   return {
     mode: 'file',
     write(chunk: Buffer) {
+      if (closed) return;
       const framed = frameOpusPacket(chunk);
       stream.write(framed);
       byteCount += chunk.length;
     },
     close() {
+      if (closed) return;
+      closed = true;
       stream.end();
       onStateChange?.('stopped');
       console.log(
@@ -131,6 +177,7 @@ function createFfplayPipe(ffmpegPath: string, onStateChange?: (s: AudioPipeState
   let restartCount = 0;
   const MAX_RESTARTS = 3;
   const decoder = createOpusDecoder();
+  const decodeFailures = createDecodeFailureLogger('ffplay');
 
   const sep = ffmpegPath.includes('\\') ? '\\' : '/';
   const idx = ffmpegPath.lastIndexOf(sep);
@@ -195,7 +242,9 @@ function createFfplayPipe(ffmpegPath: string, onStateChange?: (s: AudioPipeState
     mode: 'ffplay',
     write(chunk: Buffer) {
       if (closed || restarting) return;
-      const pcm = decodeOpusToPcm(decoder, chunk);
+      const pcm = decodeOpusToPcm(decoder, chunk, (err) =>
+        decodeFailures.report(err, chunk.length),
+      );
       if (!pcm) return;
       const target = proc;
       if (target?.stdin?.writable) {
@@ -218,6 +267,7 @@ function createFfplayPipe(ffmpegPath: string, onStateChange?: (s: AudioPipeState
         }
         proc?.kill('SIGTERM');
       }, 300);
+      decodeFailures.summary();
       onStateChange?.('stopped');
       console.log(
         `[AudioPipe:ffplay] Closed — ${byteCount} bytes processed`,
@@ -231,6 +281,7 @@ function createWasapiPipe(cableDevice: string, onStateChange?: (s: AudioPipeStat
   let byteCount = 0;
   let closed = false;
   const decoder = createOpusDecoder();
+  const decodeFailures = createDecodeFailureLogger('wasapi');
   const wasapi = createWasapiOutput(cableDevice);
 
   if (!wasapi) {
@@ -245,7 +296,9 @@ function createWasapiPipe(cableDevice: string, onStateChange?: (s: AudioPipeStat
     mode: 'wasapi',
     write(chunk: Buffer) {
       if (closed || !wasapi) return;
-      const pcm = decodeOpusToPcm(decoder, chunk);
+      const pcm = decodeOpusToPcm(decoder, chunk, (err) =>
+        decodeFailures.report(err, chunk.length),
+      );
       if (pcm) {
         wasapi.write(pcm);
         byteCount += chunk.length;
@@ -257,6 +310,7 @@ function createWasapiPipe(cableDevice: string, onStateChange?: (s: AudioPipeStat
       if (decoder) {
         try { decoder.delete(); } catch { /* ignore */ }
       }
+      decodeFailures.summary();
       onStateChange?.('stopped');
       console.log(
         `[AudioPipe:wasapi] Closed — ${byteCount} bytes processed`,

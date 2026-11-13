@@ -97,9 +97,85 @@ function createPcmFormat(sampleRate: number, channels: number, bitsPerSample: nu
 
 // ── Types ────────────────────────────────────────────────────────────
 
+export interface WasapiStats {
+  /** Bytes successfully written to the device so far */
+  submittedBytes: number;
+  /** Bytes held in the accumulator, not yet submitted */
+  pendingBytes: number;
+  /** Bytes dropped by the starvation cap (oldest audio first) */
+  starvedBytes: number;
+}
+
 export interface WasapiOutput {
   write(pcm: Buffer): void;
   close(): void;
+  /** Buffer telemetry for dashboards/tests (no WinMM calls). */
+  stats(): WasapiStats;
+}
+
+// ── PCM chunking (pure logic, unit-testable on any platform) ─────────
+
+/**
+ * Accumulates incoming PCM and slices it into fixed-size buffers ready
+ * for waveOut submission. Extracted from createWasapiOutput (F-009) so
+ * the buffer behavior (watermark, starvation cap) is unit-testable
+ * without Windows/WinMM.
+ *
+ * Starvation policy: when the device has no free pool slots and the
+ * accumulator exceeds ACC_MAX bytes, the OLDEST audio is dropped first —
+ * latency stays bounded instead of growing without limit. Accepted risk
+ * (progress.md 2026-05-16): the drop can cause an audible pop.
+ */
+export class PcmChunker {
+  private acc = Buffer.alloc(0);
+  private droppedBytes = 0;
+
+  /**
+   * Append PCM and extract up to `freeSlots` full buffers.
+   * Returns zero-copy views into an internal buffer that stay valid
+   * until the next push() — callers must copy synchronously (as
+   * createWasapiOutput does into its pool entries).
+   */
+  push(pcm: Buffer, freeSlots: number): Buffer[] {
+    const merged = Buffer.alloc(this.acc.length + pcm.length);
+    this.acc.copy(merged);
+    pcm.copy(merged, this.acc.length);
+    this.acc = merged;
+
+    const chunks: Buffer[] = [];
+    while (this.acc.length >= BUFFER_SIZE && chunks.length < freeSlots) {
+      chunks.push(this.acc.subarray(0, BUFFER_SIZE));
+      this.acc = this.acc.subarray(BUFFER_SIZE);
+    }
+
+    // Starved (no free slots) with audio still pending: cap the
+    // accumulator by dropping the oldest bytes.
+    if (this.acc.length > ACC_MAX) {
+      const drop = this.acc.length - ACC_MAX;
+      this.droppedBytes += drop;
+      this.acc = this.acc.subarray(this.acc.length - ACC_MAX);
+    }
+
+    return chunks;
+  }
+
+  /** Bytes currently held in the accumulator (partial buffer awaiting more PCM). */
+  get pendingBytes(): number {
+    return this.acc.length;
+  }
+
+  /** Total bytes dropped by the starvation cap since creation. */
+  get starvedBytes(): number {
+    return this.droppedBytes;
+  }
+
+  /** Take the pending partial buffer (for flushing on close). */
+  flush(): Buffer | null {
+    if (this.acc.length === 0) return null;
+    const rest = this.acc;
+    this.acc = Buffer.alloc(0);
+    return rest;
+  }
 }
 
 // ── Implementation ───────────────────────────────────────────────────
@@ -155,9 +231,9 @@ export function createWasapiOutput(deviceName: string): WasapiOutput | null {
   }
 
   const pool: PoolEntry[] = [];
+  const chunker = new PcmChunker();
   let closed = false;
   let byteCount = 0;
-  let acc = Buffer.alloc(0);
 
   function recycleBuffers(): void {
     for (const entry of pool) {
@@ -195,46 +271,61 @@ export function createWasapiOutput(deviceName: string): WasapiOutput | null {
     entry.hdr.writeUInt32LE(byteLen, 8);
     entry.hdr.writeUInt32LE(0, 24);
 
-    if (waveOutPrepareHeader(hwo, entry.hdr, WAVEHDR_SIZE) !== MMSYSERR_NOERROR) return;
-    if (waveOutWrite(hwo, entry.hdr, WAVEHDR_SIZE) !== MMSYSERR_NOERROR) return;
+    // Failures here used to be silent returns (accepted risk, F-009 review):
+    // a device in a bad state made audio vanish with no trace in the log.
+    let r = waveOutPrepareHeader(hwo, entry.hdr, WAVEHDR_SIZE);
+    if (r !== MMSYSERR_NOERROR) {
+      console.error(`[WasapiOutput] waveOutPrepareHeader failed: MMRESULT=${r} — buffer dropped`);
+      return;
+    }
+    r = waveOutWrite(hwo, entry.hdr, WAVEHDR_SIZE);
+    if (r !== MMSYSERR_NOERROR) {
+      console.error(`[WasapiOutput] waveOutWrite failed: MMRESULT=${r} — buffer dropped`);
+      return;
+    }
     entry.busy = true;
     byteCount += byteLen;
+  }
+
+  function freeSlotCount(): number {
+    recycleBuffers();
+    let free = pool.filter((e) => !e.busy).length;
+    if (pool.length < MAX_BUFFERS) free += MAX_BUFFERS - pool.length;
+    return free;
   }
 
   function write(pcm: Buffer): void {
     if (closed) return;
 
-    // Use growing buffer to avoid per-write Buffer.concat allocations
-    const merged = Buffer.alloc(acc.length + pcm.length);
-    acc.copy(merged);
-    pcm.copy(merged, acc.length);
-    acc = merged;
-
-    while (acc.length >= BUFFER_SIZE) {
+    // Chunker owns the accumulator: merge, slice into fixed buffers,
+    // cap growth when the pool is starved (drops oldest audio).
+    const chunks = chunker.push(pcm, freeSlotCount());
+    for (const chunk of chunks) {
       const entry = getFreeEntry();
-      if (!entry) {
-        // Cap accumulator to prevent unbounded growth when buffers are starved
-        if (acc.length > ACC_MAX) {
-          acc = acc.subarray(acc.length - ACC_MAX);
-        }
-        return;
-      }
-
-      acc.subarray(0, BUFFER_SIZE).copy(entry.data);
-      submitEntry(entry, BUFFER_SIZE);
-      acc = acc.subarray(BUFFER_SIZE);
+      if (!entry) break; // defensive — slots were counted this same tick
+      chunk.copy(entry.data);
+      submitEntry(entry, chunk.length);
     }
+  }
+
+  function stats(): WasapiStats {
+    return {
+      submittedBytes: byteCount,
+      pendingBytes: chunker.pendingBytes,
+      starvedBytes: chunker.starvedBytes,
+    };
   }
 
   function close(): void {
     if (closed) return;
     closed = true;
 
-    if (acc.length > 0) {
+    const rest = chunker.flush();
+    if (rest) {
       const entry = getFreeEntry();
       if (entry) {
-        acc.copy(entry.data);
-        submitEntry(entry, acc.length);
+        rest.copy(entry.data);
+        submitEntry(entry, rest.length);
       }
     }
 
@@ -242,7 +333,10 @@ export function createWasapiOutput(deviceName: string): WasapiOutput | null {
       waveOutReset(hwo);
       waveOutUnprepareHeaders();
       waveOutClose(hwo);
-      console.log(`[WasapiOutput] Closed — ${byteCount} bytes`);
+      console.log(
+        `[WasapiOutput] Closed — ${byteCount} bytes` +
+          (chunker.starvedBytes > 0 ? `, ${chunker.starvedBytes} dropped by starvation cap` : ''),
+      );
     }, 500);
   }
 
@@ -252,5 +346,5 @@ export function createWasapiOutput(deviceName: string): WasapiOutput | null {
     }
   }
 
-  return { write, close };
+  return { write, close, stats };
 }
