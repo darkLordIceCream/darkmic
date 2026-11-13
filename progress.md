@@ -13,7 +13,7 @@
 
 - **动机（用户提出）**: 长自主会话泄漏 dev server / 测试端口 / darkmic-test 模拟器 / 浏览器调试标签页 → 内存不足或 CPU 过载；且章程 §8 基准测试要求安静机器，残留进程会污染 CPU/内存数据。评估结论：合理，且补上了章程"leave clean state"无独立核查的空洞。
 - **设计关键**: 杀进程的代理必须先核对身份再动手——端口只是线索不是许可（3000 可能是用户其他应用），身份不明只报告；终端窗口无法安全归属只报告；不删文件、不改代码。
-- **交付**: ResourceSteward 定义（name/description/系统提示词）已提供给用户，由用户配置到 `~/.zcode/agents/resourcesteward.md`（**待用户完成配置**）。
+- **交付**: ResourceSteward 定义（name/description/系统提示词）已写入 `~/.zcode/agents/resourcesteward.md`（2026-11-14，与现有 6 个代理同目录同格式，frontmatter 已验证）。
 - **文档同步**: 章程 §5.6（角色+规则）、§6 协作表 3 行（E2E 后/基准前/长会话收尾）、§7G.11 清理步骤、§8 安静机器前置、§12 收尾审计、§13 报告项；AGENTS.md End of Session 加第 6 项；decisions.md D-006。
 
 ### 2026-11-14 (cont. 2) Session | 自主工程章程可行性评估 + 文档对齐
