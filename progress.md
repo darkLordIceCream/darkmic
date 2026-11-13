@@ -9,6 +9,12 @@
 
 ## Status | 状态
 
+### 2026-11-14 (cont. 4) Session | 章程补安卓模拟器章节 + 可用性审查
+
+- **动机（用户提出）**: 章程未覆盖 ZCode 安卓模拟器插件——而 emulator E2E 测试台（cont. 2 会话建成）是无人值守迭代手机端功能（F-010/F-011）的关键基础设施。
+- **章程更新**: §2 Mobile 加模拟器验证行；§4.1 测试清单加模拟器项；新增 §4.3 "Android Emulator Validation (Phone Side)"（环境 AVD darkmic-test + Brave arm64 + 10.0.2.2、两种驱动方式 scripts/e2e-emulator.sh 与插件工具、模拟器可验证/不可验证边界、维护备注）；原 Testing Strategy 顺延为 §4.4；§9 新增 `PENDING_REAL_DEVICE_TEST` 状态（模拟器麦克风喂静音，音质/延迟/AGC/锁屏采 集/弱机降级必须真机验证）。
+- **可用性审查（用于 goal 模式）**: 结构编号 1–14 + 4.1–4.4 + 5.1–5.6 无断号无重复；交叉引用 §4.3×3 / §5.6×3 / §9×1 全部指向存在的小节；引用文件 AGENTS.md/README.md/feature_list.json/progress.md/decisions.md/scripts/e2e-emulator.sh/init.sh 全部存在；AVD darkmic-test 本机存在。结论：可用作自主迭代章程。
+
 ### 2026-11-14 (cont. 3) Session | 新增 ResourceSteward 后勤子代理
 
 - **动机（用户提出）**: 长自主会话泄漏 dev server / 测试端口 / darkmic-test 模拟器 / 浏览器调试标签页 → 内存不足或 CPU 过载；且章程 §8 基准测试要求安静机器，残留进程会污染 CPU/内存数据。评估结论：合理，且补上了章程"leave clean state"无独立核查的空洞。

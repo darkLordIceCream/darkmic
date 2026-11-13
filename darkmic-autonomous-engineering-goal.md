@@ -72,6 +72,7 @@ The product should provide:
 **Mobile**
 - Mobile Chromium-based browsers.
 - Microphone permissions, browser compatibility, audio capture and WebCodecs support must be validated.
+- Daily phone-side validation happens on the Android emulator (Brave = Chromium engine, §4.3); physical-device validation remains required for microphone-dependent behavior.
 
 Do not assume all platforms have identical audio capabilities.
 
@@ -226,6 +227,7 @@ Test as much of the application as possible on macOS:
 - HTTP and WebSocket communication.
 - Browser-side microphone capture.
 - WebCodecs and Opus encoding.
+- Phone-side connection flows, permission dialogs and UI interaction via the Android emulator (§4.3).
 - Rust compilation and unit tests.
 - Rust Audio Core.
 - PCM processing.
@@ -240,6 +242,8 @@ Test as much of the application as possible on macOS:
 Use BlackHole or another appropriate audio device for local audio-routing tests.
 
 Use PCM file output as a deterministic testing adapter where hardware-independent testing is useful.
+
+Use the Android emulator (§4.3) for phone-side validation instead of requiring a physical device.
 
 ### 4.2 Windows-Only Validation
 
@@ -265,7 +269,19 @@ A successful Windows compilation does not prove correct audio routing.
 
 Maintain a list of all outstanding Windows validation tasks.
 
-### 4.3 Testing Strategy
+### 4.3 Android Emulator Validation (Phone Side)
+
+Phone-side features must be iterable without a physical device. Use the Android emulator as the standard mobile test environment:
+
+- **Environment**: AVD `darkmic-test` (system image android-35, arm64-v8a) with the Brave arm64 APK (Chromium engine) side-loaded and microphone permission pre-granted. The host server is reachable at `10.0.2.2`, so no QR code or manual IP entry is needed.
+- **Two ways to drive it**:
+  - `scripts/e2e-emulator.sh` — scripted end-to-end run: boots a file-mode server (port 3100, override with `DARKMIC_E2E_PORT`), drives Brave through first-run dialogs, the certificate interstitial, Start/Stop, and counts received opus chunks as the pass criterion. Proven working (3 consecutive passes, 2026-11-14).
+  - The ZCode android-emulator plugin tools (create/start emulator, install app, open URL, UI tap/describe, screenshot, logs) for ad-hoc, interactive phone-side exploration.
+- **What the emulator genuinely verifies**: the full transport chain (capture → WebCodecs encode → WebSocket → server decode → output), permission and certificate flows, UI states and reconnect logic.
+- **What the emulator cannot verify**: the emulator microphone feeds silence, so audio quality, real latency, AGC behavior, Wake Lock lock-screen/background capture and weak-device degradation still require a physical device. Mark such items `PENDING_REAL_DEVICE_TEST` (§9), never `DONE`, until verified on real hardware.
+- **Maintenance notes**: Brave remembers certificate exceptions per host (accepting `10.0.2.2:3000` covers other ports on the same host); uiautomator dumps can fail during animations (retry); the AVD-creation workaround is recorded in `progress.md`.
+
+### 4.4 Testing Strategy
 
 Prefer layered testing:
 
@@ -769,8 +785,11 @@ Maintain a clear distinction between:
 - `BLOCKED`
 - `DEFERRED`
 - `PENDING_WINDOWS_TEST`
+- `PENDING_REAL_DEVICE_TEST`
 
 A feature can be marked `DONE` only when its acceptance criteria are satisfied.
+
+Phone-side behavior that depends on real hardware (audio quality, latency, AGC, lock-screen capture) must keep `PENDING_REAL_DEVICE_TEST` until verified on a physical device. Emulator results never substitute for real-device verification of these items.
 
 A feature that works in a development environment but has not been verified on the target platform must retain an appropriate validation status.
 
