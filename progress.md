@@ -37,6 +37,27 @@
 - **BUG-001 真机验证（用户操作）**: Windows 上双击 release exe → 手机连接 → 点停止 → 确认 uptime 停止计时且音频关闭；恢复再停止重复一次。通过后 BUG-001 与 F-009 均转 done。
 - F-008（Phase 1）为下一实现项。
 
+### 2026-11-14 (cont.) Session | 仿真器 E2E 测试台（手机端自动化验证）
+
+**目的 | Motivation**: 用户提出用安卓模拟器代替"真机扫码"，让 F-010/F-011 等手机端功能在 macOS 上即可自动化验证。模拟器 Brave = 标准 Chromium 客户端，可全自动打开 URL、过证书警告、授权麦克风、点击开始。
+
+**一次性环境搭建（本机已完成）| One-time setup**:
+- sdkmanager 安装 `emulator` + `system-images;android-35;default;arm64-v8a`（~2.9GB）。注意：非交互 shell 需显式 `JAVA_HOME=/opt/homebrew/Cellar/openjdk@17/...`。
+- **avdmanager 22.0 (homebrew) 创建 AVD 有 bug**（"Package path is not valid ... null"，即使镜像已注册）——绕过方式：手写 `~/.android/avd/darkmic-test.avd/config.ini` + `darkmic-test.ini`（emulator -list-avds 能发现即可用）。
+- 浏览器侧载：官方 Chromium 快照只有 armeabi-v7a（API 35 arm64-only 镜像装不上）→ 改用 **Brave 官方 arm64 APK**（Chromium 内核，GitHub Releases，SHA256 已校验：`7b92ee8c...f37b`，v1.99.57）。
+- 授权：`adb shell pm grant com.brave.browser android.permission.RECORD_AUDIO`（app 层）。
+
+**自动化流程（scripts/e2e-emulator.sh，3 次运行全通过）**:
+1. 起独立 file 模式服务（默认 :3100，`DARKMIC_E2E_PORT` 可覆盖）
+2. `am start` 用 Brave 打开 `https://10.0.2.2:<port>/phone`（10.0.2.2 = 模拟器访问宿主机的固定别名，**不需要扫码/输 IP**）
+3. uiautomator dump + 坐标点击：首启引导（CANCEL/Maybe later/Continue）→ 证书插页（Advanced → "Proceed to 10.0.2.2 (unsafe)"）→ 点 Start Microphone → 授权弹窗（forever + Allow）
+4. 等 8 秒 → 服务端日志数 "Chunk #"（≥20 PASS）→ 点 Stop → 可选解码校验
+- **实测证据**: 手动流程 663 chunks/45KB 落盘，1385/1385 包解码成功（2.66MB PCM）；脚本 :3200 → 336 chunks，:3300 → 341 chunks，477/477 解码 915840 PCM 字节。
+- 已知行为：Brave 证书例外按**主机**记忆（10.0.2.2:3000 的 Proceed 让 :3100/:3300 免插页）；mic 授权弹窗是点 Start 后才触发（getUserMedia 惰性请求）；uiautomator dump 动画期间会间歇失败（脚本内已重试）。
+- **限制**: 模拟器虚拟麦克风喂静音（3 字节 opus 帧，与单测静音帧一致）——传输/解码/ UI 全真，但音质/真实延迟/AGC 表现仍需真机；VB-Cable 输出仍 Windows-only。
+
+**用回该测试台 | How to reuse**: `./scripts/e2e-emulator.sh`（模拟器已在跑则直接用；否则 `DARKMIC_AVD=darkmic-test` 自动启动）。
+
 ### 2026-10-11 Session | 本次会话：仓库同步 + 架构确认
 
 - 本地 main 原停在 F-002 + README 优化（落后远程 41 个提交，工作区 audio.ts 还是 stub）。已 fast-forward 到 origin/main（544ad75，含 F-003~F-005 完整音频管线），再 fast-forward 合并 `origin/fix/bug-001-exe-uptime-audio`（2c09a01，含 F-007 打包 + BUG-001 修复）。历史保持线性，零冲突。
@@ -197,6 +218,7 @@
 - [x] 2026-11-14: `pnpm run typecheck` + `pnpm run build` — clean | 类型检查与构建通过
 - [x] 2026-11-14: `./init.sh` full pass — now includes unit test step | 完整验证通过（已含单测步骤）
 - [x] 2026-11-14: Runtime smoke test — config.json values effective (port 3199 / file mode / 48000bps), invalid env warned, server boots clean | 运行时冒烟测试通过
+- [x] 2026-11-14: Emulator E2E — Brave arm64 side-loaded (SHA256 verified), scripted flow 3× PASS (:3200→336, :3300→341 chunks), decode 477/477 packets → 915840 PCM bytes | 仿真器 E2E 测试台建成并通过
 - [ ] 2026-11-14: BUG-001 real-machine E2E (exe on Windows + phone stop → uptime freeze + audio close) — awaiting user verification | BUG-001 真机验证待用户执行
 
 ## Notes for Next Session | 下次会话备注
@@ -208,3 +230,4 @@
 - **Windows prerequisites**: [VB-Cable](https://vb-audio.com/Cable/) (wasapi mode needs it; FFmpeg only for ffplay mode / test scripts) | Windows 前置依赖
 - **WaveOut device name note**: WinMM truncates device names to 31 chars. "CABLE Input (VB-Audio Virtual C" is the correct match. | 设备名截断匹配
 - **PcmChunker**: pure buffer logic lives in `src/wasapi.ts`; `WasapiOutput.stats()` (submitted/pending/starved bytes) is ready for F-012 dashboard metrics | 缓冲遥测已为 F-012 预留
+- **Emulator E2E harness**: `scripts/e2e-emulator.sh` automates the phone side (Brave arm64 in AVD `darkmic-test`, URL via 10.0.2.2 instead of QR). Enables autonomous iteration on F-010/F-011 phone features. Caveats: emulator mic = silence; real-device checks (latency/AGC/quality) still need a phone. | 仿真器测试台使手机端功能可自主迭代；音质/延迟仍需真机
