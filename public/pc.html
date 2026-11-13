@@ -188,7 +188,7 @@
   /* ── Metrics row ─────────────────────────────────── */
   .metrics {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 1px;
     background: var(--border);
     border: 1px solid var(--border);
@@ -223,6 +223,21 @@
     font-size: 11px;
     font-weight: 300;
     color: var(--text-dim);
+  }
+
+  .levelbar {
+    width: 100%;
+    height: 3px;
+    background: #1c1c1c;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 2px;
+  }
+  .levelbar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.3s linear;
   }
 
   /* ── Log panel ───────────────────────────────────── */
@@ -368,6 +383,12 @@
           <div class="metric-value live" id="metric-latency">—</div>
           <div class="metric-unit">one-way ms</div>
         </div>
+        <div class="metric">
+          <div class="metric-label">Level</div>
+          <div class="metric-value live" id="metric-level">—</div>
+          <div class="metric-unit">dBFS phone</div>
+          <div class="levelbar"><div class="levelbar-fill" id="metric-level-fill"></div></div>
+        </div>
       </div>
 
       <div class="log-panel">
@@ -416,6 +437,8 @@ const metricBytes = document.getElementById('metric-bytes');
 const metricChunks = document.getElementById('metric-chunks');
 const metricUptime = document.getElementById('metric-uptime');
 const metricLatency = document.getElementById('metric-latency');
+const metricLevel = document.getElementById('metric-level');
+const metricLevelFill = document.getElementById('metric-level-fill');
 let totalBytes = 0;
 let totalChunks = 0;
 let startTime = null;
@@ -485,6 +508,13 @@ ws.onmessage = (event) => {
       case 'latency':
         metricLatency.textContent = msg.ms.toString();
         break;
+      case 'level': {
+        const v = Number(msg.v);
+        metricLevel.textContent = v.toFixed(1);
+        metricLevelFill.style.width =
+          Math.max(0, Math.min(100, ((v + 60) / 60) * 100)).toFixed(0) + '%';
+        break;
+      }
     }
   } catch {}
 };

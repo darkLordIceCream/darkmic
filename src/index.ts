@@ -201,13 +201,15 @@ wss.on('connection', (ws) => {
       );
       broadcast({ type: 'stats', bytes: totalBytes, chunks: chunkCount });
     } else {
-      // Text messages: ping/pong relay for latency measurement
+      // Text messages: ping/pong relay for latency measurement, level relay
       try {
         const msg = JSON.parse(data.toString());
         if (msg.type === 'ping') {
           ws.send(JSON.stringify({ type: 'pong', t: msg.t }));
         } else if (msg.type === 'latency') {
           broadcast({ type: 'latency', ms: msg.ms });
+        } else if (msg.type === 'level' && Number.isFinite(msg.v)) {
+          broadcast({ type: 'level', v: msg.v }); // phone level meter → dashboard (F-011)
         }
       } catch { /* ignore malformed JSON */ }
     }

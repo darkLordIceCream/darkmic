@@ -104,11 +104,11 @@
       "id": "F-011",
       "name": "Browser-side audio DSP",
       "nameZh": "浏览器端音频 DSP",
-      "description": "Phase 3 of the 2026-11-14 roadmap — all phone-side, browser capability only. Mic device selection (enumerateDevices + applyConstraints). EQ via BiquadFilter chain (80Hz highpass cut + adjustable lowshelf/peaking/highshelf) after AGC, before encoding. Noise gate via AudioWorklet (adjustable RMS threshold). Level meter via AnalyserNode shown on phone + broadcast to dashboard every 500ms. Settings panel persisted in localStorage (AGC/EQ/gate/echo-cancellation toggles).",
+      "description": "Phase 3 of the 2026-11-14 roadmap — all phone-side, browser capability only. Mic device selection (enumerateDevices + deviceId constraint with stale-device fallback). EQ via BiquadFilter chain (fixed 80Hz highpass cut + adjustable lowshelf/highshelf) after AGC, before encoding. Noise gate via AudioWorklet (RMS + 250ms hold, adjustable threshold). Level meter via AnalyserNode shown on phone + broadcast to dashboard every 500ms. Settings panel persisted in localStorage (echo-cancellation/AGC/EQ/gate toggles + slider values, sanitized on load).",
       "descriptionZh": "2026-11-14 路线图 Phase 3——全部手机端，仅浏览器能力。麦克风设备选择（enumerateDevices + applyConstraints）。EQ：BiquadFilter 链（80Hz 低切 + 可调 lowshelf/peaking/highshelf），插在 AGC 后编码前。噪声门：AudioWorklet 实现（可调 RMS 门限）。电平表：AnalyserNode，手机端显示并每 500ms 广播到仪表盘。设置面板 localStorage 持久化（AGC/EQ/噪声门/回声消除开关）",
       "dependencies": ["F-010"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "PENDING_REAL_DEVICE_TEST",
+      "evidence": "Implemented + emulator-verified (2026-11-14). Capture graph rebuilt: mic → [noise gate AudioWorklet (public/gate-worklet.js, RMS + 250ms hold, k-rate threshold)] → [AGC compressor, toggleable] → [EQ: fixed 80Hz highpass + lowshelf(200Hz)/highshelf(4kHz) gains] → analyser tap → dest; each stage toggleable. Settings panel (⚙ on phone): mic picker (enumerateDevices, stale-deviceId fallback to default on NotFound), echo-cancel/AGC/EQ/gate toggles, bass/treble/gate-threshold sliders with LIVE setTargetAtTime while streaming, persisted in localStorage (darkmic-settings) — verified: toggles/bass=3 survived full page reload. Level meter: AnalyserNode RMS every 500ms → phone bar + dB display (clamped -99..0) + {type:'level'} WS broadcast → server relay (src/index.ts) → dashboard 5th metric (LEVEL dBFS + mini bar, pc.html). Emulator evidence: settings UI interacted via adb (screenshots), persistence across reload, streaming with EQ+gate enabled E2E PASS 1820 chunks (AudioWorklet loads clean), level broadcast captured by host WS client at 500ms cadence (12 msgs/6s). Local: typecheck+build clean, vitest 24/24, JS syntax checks. PENDING_REAL_DEVICE_TEST: audible EQ/gate effect on real voice, level meter behavior with real mic input, multi-mic device switching, gate threshold tuning by ear."
     },
     {
       "id": "F-012",

@@ -96,6 +96,31 @@
 
 **遗留 | Remaining**: F-010 状态 = PENDING_REAL_DEVICE_TEST（锁屏后台采集、真实网络重连、PWA 安装流程、受信证书下的 Wake Lock API 待真机）；F-008 下一 Windows 会话。
 
+### 2026-11-14 (cont. #3) Session | 自主迭代 #2：F-011 浏览器端音频 DSP
+
+**实现 | Implemented**:
+- 采集图重构（`public/client.js`）：mic → [噪声门 AudioWorklet] → [AGC compressor] → [EQ] → analyser 电平表 → dest，各阶段开关化（echoCancel/agc/eq/gate）。EQ = 固定 80Hz highpass（人声低切）+ lowshelf 200Hz（Bass）+ highshelf 4kHz（Treble）。
+- `public/gate-worklet.js`（新）：RMS 噪声门 AudioWorklet——k-rate threshold（dBFS）、开门即时、关后 250ms hold。
+- 设置面板（⚙）：麦克风下拉（enumerateDevices；失效 deviceId 在 NotFound/OverconstrainedError 时自动回退默认设备并清除设置）、回声消除/AGC/EQ/噪声门开关、Bass/Treble/门限滑杆（**流中实时 setTargetAtTime**）、localStorage 持久化（darkmic-settings）。
+- 电平表：AnalyserNode RMS 每 500ms → 手机 UI 条 + dB 显示（钳制 -99~0）→ `{type:'level'}` WS 广播 → `src/index.ts` 中继 → 仪表盘第 5 格 LEVEL（dBFS + 迷你条，pc.html）。
+- `public/pc.html`：metrics 网格 4→5 列 + LEVEL 格。
+
+**仿真器验证 | Emulator verification**:
+- 设置面板 adb 交互（截图证据）：EQ ✓ / 噪声门 ✓ / Bass=3 滑杆生效；**重载后全部保留**（localStorage）✓；麦克风下拉列出 Default ✓。
+- EQ+噪声门启用状态下流采集：E2E 回归 PASS **1820 chunks**（AudioWorklet 加载无错，chunks 正常）。
+- 电平广播：宿主机 WS 客户端 6 秒收到 12 条（500ms 节拍 ✓）→ 服务端中继 → 广播路径全通；钳制后样本 -99 dB（早期 -200 来自 pre-clamp 的旧标签页缓存，非代码问题）。
+- 本地：typecheck + build 干净、vitest 24/24、gate-worklet.js/client.js 语法检查通过。
+- 噪声门+静音麦交互实证：门关闭时 PCM 全零、opus 帧仍持续输出（3 字节帧），流不断——符合设计。
+
+**PENDING_REAL_DEVICE_TEST**: EQ/噪声门对人声的实际听感、电平表真实输入行为、多麦克风切换、门限耳调。
+
+**QAInspector 审查（CONDITIONAL_PASS，发现全项处理）**:
+- 独立复证：vitest 24/24、typecheck/build、DOM id 交叉引用 22 个全一致、**worklet 数学仿真 11/11**（阈值滞回/hold 250ms/k-rate/NaN 防护/长度守卫）、localStorage 边界 12/12、服务端 E2E 20 项（MIME/中继/非法 v 过滤/ping 回归/lazy pipe）、**headless Chrome + 假音频 WAV 实测噪声门**（音调段 -19.8dB / 静音段 -99dB 交替吻合 + live 滑杆收敛 + stop 清理 6 引用全 null）。
+- **P1（已修）**: connectAndStream 重入不清 timer → level/ping 广播频率每次重连翻倍（实测 2Hz→4Hz）。修复：入口处 clearInterval 两个 timer。
+- **P2（已修）**: sw.js CACHE bump v1→v2 + SHELL 加 /gate-worklet.js；getUserMedia 显式 `autoGainControl: false`（面板 AGC 开关成为唯一增益控制，修 F-004 以来原生 AGC 恒开）；loadSettings 数值/类型清洗（坏 localStorage 不进 DSP 图）；start 失败路径补 stop()（F-004 既有泄漏）；index.ts level 校验改 Number.isFinite；feature_list 描述与实现对齐（无 applyConstraints 热切换、无 peaking band）。
+- **P2/P3（记录为决策/延后）**: gate 硬切无淡出 → 真机听感后决定（D-010）；多手机 level 互混 → v1 取舍记录（D-009）；SW 缓存 bump 纪律 → D-009。
+- 复验：vitest 24/24 + E2E **1775 chunks**（EQ+gate 启用全链路）。
+
 ### 2026-11-14 (cont.) Session | 仿真器 E2E 测试台（手机端自动化验证）
 
 **目的 | Motivation**: 用户提出用安卓模拟器代替"真机扫码"，让 F-010/F-011 等手机端功能在 macOS 上即可自动化验证。模拟器 Brave = 标准 Chromium 客户端，可全自动打开 URL、过证书警告、授权麦克风、点击开始。

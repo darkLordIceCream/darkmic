@@ -7,10 +7,11 @@
  * intercepted, and /api/* responses are never cached.
  */
 
-const CACHE = 'darkmic-shell-v1';
+const CACHE = 'darkmic-shell-v2';
 const SHELL = [
   '/phone',
   '/client.js',
+  '/gate-worklet.js',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',

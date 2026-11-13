@@ -30,16 +30,76 @@
     .status.connected { color: #22c55e; }
     .status.error { color: #ef4444; }
     .stats { margin-top: 0.5rem; font-size: 0.85rem; color: #555; font-variant-numeric: tabular-nums; }
+    .levelbar {
+      margin: 0.6rem auto 0; width: 220px; height: 8px;
+      background: #222; border-radius: 4px; overflow: hidden;
+    }
+    .levelbar-fill {
+      height: 100%; width: 0%;
+      background: #22c55e; border-radius: 4px;
+      transition: width 0.25s linear;
+    }
+    .leveldb { margin-top: 0.3rem; font-size: 0.72rem; color: #555; font-variant-numeric: tabular-nums; }
+    .gear {
+      position: fixed; top: 14px; right: 14px; z-index: 10;
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 1px solid #333; background: #1a1a1a; color: #888;
+      font-size: 1.1rem; line-height: 1; cursor: pointer;
+    }
+    .settings {
+      position: fixed; inset: auto 0 0 0; z-index: 20;
+      background: #181818; border-top: 1px solid #2a2a2a;
+      border-radius: 14px 14px 0 0; padding: 18px 20px calc(18px + env(safe-area-inset-bottom));
+      text-align: left; max-height: 70vh; overflow-y: auto;
+    }
+    .settings.hidden { display: none; }
+    .settings h2 { font-size: 0.95rem; font-weight: 600; color: #ddd; margin-bottom: 10px; }
+    .set-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 0; border-bottom: 1px solid #222;
+      font-size: 0.85rem; color: #aaa;
+    }
+    .set-row label { flex: 0 0 130px; }
+    .set-row select, .set-row input[type="range"] { flex: 1; accent-color: #22c55e; }
+    .set-row select {
+      background: #111; color: #ccc; border: 1px solid #333;
+      border-radius: 6px; padding: 5px; font-size: 0.8rem;
+    }
+    .set-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: #22c55e; }
+    .set-row .val { flex: 0 0 44px; text-align: right; color: #666; font-variant-numeric: tabular-nums; }
+    .set-note { font-size: 0.72rem; color: #555; margin: 10px 0 12px; line-height: 1.5; }
+    .set-done {
+      width: 100%; padding: 10px; border-radius: 999px; border: none;
+      background: #22c55e; color: #fff; font-weight: 600; font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
+  <button id="gearBtn" class="gear" title="Audio settings">⚙</button>
   <div class="container">
     <h1>darkmic</h1>
     <p class="subtitle">Using this device as your PC microphone</p>
     <button id="micBtn">Start Microphone</button>
     <div id="status" class="status">Tap "Start Microphone" to begin</div>
     <div id="stats" class="stats"></div>
+    <div id="levelbar" class="levelbar" hidden><div id="levelfill" class="levelbar-fill"></div></div>
+    <div id="leveldb" class="leveldb" hidden>— dB</div>
   </div>
+
+  <div id="settings" class="settings hidden">
+    <h2>Audio settings</h2>
+    <div class="set-row"><label for="set-mic">Microphone</label><select id="set-mic"></select></div>
+    <div class="set-row"><label for="set-ec">Echo cancellation</label><input type="checkbox" id="set-ec"></div>
+    <div class="set-row"><label for="set-agc">AGC (compressor)</label><input type="checkbox" id="set-agc"></div>
+    <div class="set-row"><label for="set-eq">EQ (80Hz cut + tone)</label><input type="checkbox" id="set-eq"></div>
+    <div class="set-row"><label for="set-bass">Bass</label><input type="range" id="set-bass" min="-12" max="12" step="1"><span id="set-bass-v" class="val"></span></div>
+    <div class="set-row"><label for="set-treble">Treble</label><input type="range" id="set-treble" min="-12" max="12" step="1"><span id="set-treble-v" class="val"></span></div>
+    <div class="set-row"><label for="set-gate">Noise gate</label><input type="checkbox" id="set-gate"></div>
+    <div class="set-row"><label for="set-gth">Gate threshold</label><input type="range" id="set-gth" min="-90" max="-20" step="1"><span id="set-gth-v" class="val"></span></div>
+    <div class="set-note">Mic / echo-cancel / AGC / EQ / gate toggles apply on next Start. Sliders adjust live while streaming. Settings persist on this device.</div>
+    <button id="set-done" class="set-done">Done</button>
+  </div>
+
   <script src="/client.js"></script>
 </body>
 </html>

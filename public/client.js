@@ -6,6 +6,9 @@
 const micBtn = document.getElementById('micBtn');
 const statusEl = document.getElementById('status');
 const statsEl = document.getElementById('stats');
+const levelBar = document.getElementById('levelbar');
+const levelFill = document.getElementById('levelfill');
+const levelDb = document.getElementById('leveldb');
 
 // ── PWA service worker (F-010) ───────────────────────────────────
 // Caches the phone shell so the page still opens when the server briefly
@@ -43,6 +46,51 @@ let currentBitrate = 32000;
 // Starting bitrate pushed by the server via {type:'config'} (config.json, F-009)
 let serverInitialBitrate = 32000;
 let lastBitrateSwitch = 0;
+
+// ── Audio settings (F-011, persisted per device) ─────────────────
+
+const DEFAULT_SETTINGS = {
+  micId: '',
+  echoCancel: true,
+  agc: true,
+  eq: false,
+  bass: 0,
+  treble: 0,
+  gate: false,
+  gateThreshold: -50,
+};
+
+let settings = loadSettings();
+
+function loadSettings() {
+  let saved = {};
+  try {
+    const parsed = JSON.parse(localStorage.getItem('darkmic-settings') || '{}');
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) saved = parsed;
+  } catch (_) {
+    saved = {};
+  }
+  const s = { ...DEFAULT_SETTINGS, ...saved };
+  // Sanitize: corrupted values must not reach the DSP graph (QAInspector P2-3)
+  for (const k of ['bass', 'treble', 'gateThreshold']) {
+    if (!Number.isFinite(s[k])) s[k] = DEFAULT_SETTINGS[k];
+  }
+  for (const k of ['micId', 'echoCancel', 'agc', 'eq', 'gate']) {
+    if (typeof s[k] !== typeof DEFAULT_SETTINGS[k]) s[k] = DEFAULT_SETTINGS[k];
+  }
+  return s;
+}
+
+function saveSettings() {
+  try { localStorage.setItem('darkmic-settings', JSON.stringify(settings)); } catch (_) { /* private mode */ }
+}
+
+// DSP node refs for the current capture session (null when stopped)
+let eqNodes = null;   // { low, high } BiquadFilter pair
+let gateNode = null;  // AudioWorkletNode
+let analyser = null;
+let levelData = null;
+let levelTimer = null;
 
 // ── Reconnect ────────────────────────────────────────────────────
 
@@ -138,27 +186,87 @@ async function start() {
     // 1. Get mic
     rawStream = await navigator.mediaDevices.getUserMedia({
       audio: {
+        deviceId: settings.micId ? { exact: settings.micId } : undefined,
         channelCount: 1,
-        echoCancellation: true,
+        echoCancellation: settings.echoCancel,
+        // The panel's "AGC (compressor)" toggle owns gain control — Chrome's
+        // native AGC must not stack on top of it (QAInspector P2-4).
+        autoGainControl: false,
         noiseSuppression: true,
       },
+    }).catch((err) => {
+      // A stale saved mic id (device unplugged) must not brick Start —
+      // fall back to the default device once and clear the setting.
+      if ((err.name === 'NotFoundError' || err.name === 'OverconstrainedError') && settings.micId) {
+        settings.micId = '';
+        saveSettings();
+        return navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: settings.echoCancel,
+            autoGainControl: false,
+            noiseSuppression: true,
+          },
+        });
+      }
+      throw err;
     });
 
-    // 1b. AGC via DynamicsCompressorNode — smooth volume before encoding
+    // 1b. Capture graph: mic → [gate] → [AGC] → [EQ] → analyser tap → encoder
+    // (F-011: each stage toggleable from the settings panel)
     audioCtx = new AudioContext({ sampleRate: 48000 });
-    const source = audioCtx.createMediaStreamSource(rawStream);
-    const comp = audioCtx.createDynamicsCompressor();
-    comp.threshold.value = -50;
-    comp.knee.value = 20;
-    comp.ratio.value = 12;
-    comp.attack.value = 0.003;
-    comp.release.value = 0.25;
-    source.connect(comp);
+    let node = audioCtx.createMediaStreamSource(rawStream);
+
+    if (settings.gate) {
+      await audioCtx.audioWorklet.addModule('/gate-worklet.js');
+      gateNode = new AudioWorkletNode(audioCtx, 'noise-gate');
+      gateNode.parameters.get('threshold').value = settings.gateThreshold;
+      node.connect(gateNode);
+      node = gateNode;
+    }
+
+    if (settings.agc) {
+      const comp = audioCtx.createDynamicsCompressor();
+      comp.threshold.value = -50;
+      comp.knee.value = 20;
+      comp.ratio.value = 12;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.25;
+      node.connect(comp);
+      node = comp;
+    }
+
+    if (settings.eq) {
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 80;   // fixed voice low-cut
+      hp.Q.value = 0.7;
+      const low = audioCtx.createBiquadFilter();
+      low.type = 'lowshelf';
+      low.frequency.value = 200;
+      low.gain.value = settings.bass;
+      const high = audioCtx.createBiquadFilter();
+      high.type = 'highshelf';
+      high.frequency.value = 4000;
+      high.gain.value = settings.treble;
+      node.connect(hp);
+      hp.connect(low);
+      low.connect(high);
+      node = high;
+      eqNodes = { low, high };
+    }
+
     const dest = audioCtx.createMediaStreamDestination();
     dest.channelCountMode = 'explicit';
     dest.channelCount = 1;
-    comp.connect(dest);
+    node.connect(dest);
     stream = dest.stream;
+
+    // Level meter tap (F-011)
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    levelData = new Float32Array(analyser.fftSize);
+    node.connect(analyser);
 
     // 2. Connect WebSocket + setup encoder, then stream
     await connectAndStream();
@@ -170,6 +278,12 @@ async function start() {
 async function connectAndStream() {
   // Clean up any previous encoder/ws before reconnect
   cleanupEncoder();
+
+  // Clear timers from the previous attempt — reconnect paths re-enter this
+  // function, and stacked intervals double ping/level broadcast rates on
+  // every reconnect (QAInspector P1, 2026-11-14).
+  if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+  if (levelTimer) { clearInterval(levelTimer); levelTimer = null; }
 
   // Detach the old socket's handlers and close it: a socket left in CLOSING
   // fires its onclose after this reconnect is already streaming, scheduling a
@@ -284,6 +398,11 @@ async function connectAndStream() {
       }
     }, 2000);
 
+    // Level meter + broadcast (F-011)
+    levelBar.hidden = false;
+    levelDb.hidden = false;
+    levelTimer = setInterval(updateLevelMeter, 500);
+
     // 5. Read loop
     readLoop();
   } catch (err) {
@@ -291,6 +410,10 @@ async function connectAndStream() {
     if (isRunning) {
       setStatus(`Error: ${err.message}`, 'error');
       scheduleReconnect();
+    } else {
+      // Initial connect failed — release the mic + audio context instead of
+      // leaving them dangling until the next Start (QAInspector P3-2).
+      stop();
     }
   }
 }
@@ -351,6 +474,10 @@ function stop() {
     clearInterval(pingTimer);
     pingTimer = null;
   }
+  if (levelTimer) {
+    clearInterval(levelTimer);
+    levelTimer = null;
+  }
 
   cleanupEncoder();
 
@@ -366,6 +493,13 @@ function stop() {
     audioCtx.close();
     audioCtx = null;
   }
+  eqNodes = null;
+  gateNode = null;
+  analyser = null;
+  levelData = null;
+  levelBar.hidden = true;
+  levelDb.hidden = true;
+  levelFill.style.width = '0%';
   if (ws) {
     ws.onopen = null;
     ws.onclose = null;
@@ -392,6 +526,98 @@ function cleanupEncoder() {
     encoder = null;
   }
 }
+
+// ── Level meter (F-011) ─────────────────────────────────────────
+
+function updateLevelMeter() {
+  if (!analyser || !isRunning) return;
+  analyser.getFloatTimeDomainData(levelData);
+  let sum = 0;
+  for (let i = 0; i < levelData.length; i++) sum += levelData[i] * levelData[i];
+  const rms = Math.sqrt(sum / levelData.length);
+  const db = 20 * Math.log10(Math.max(rms, 1e-10));
+  const dbClamped = Math.max(-99, Math.min(0, db)); // gate-closed silence reads -inf; keep sane range
+  const pct = Math.max(0, Math.min(100, ((dbClamped + 60) / 60) * 100));
+  levelFill.style.width = pct.toFixed(0) + '%';
+  levelDb.textContent = dbClamped.toFixed(1) + ' dB';
+  // Relay to the dashboard at the same cadence (server broadcasts it).
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'level', v: Math.round(dbClamped * 10) / 10 }));
+  }
+}
+
+// ── Settings panel (F-011) ──────────────────────────────────────
+
+async function populateMicList() {
+  const sel = document.getElementById('set-mic');
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const mics = devices.filter((d) => d.kind === 'audioinput');
+    sel.innerHTML = '';
+    mics.forEach((d, i) => {
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.textContent = d.label || `Microphone ${i + 1}`;
+      sel.appendChild(opt);
+    });
+    if (settings.micId && [...sel.options].some((o) => o.value === settings.micId)) {
+      sel.value = settings.micId;
+    }
+  } catch (_) {
+    sel.innerHTML = '<option value="">(unable to list devices)</option>';
+  }
+}
+
+function bindSettings() {
+  const bindToggle = (id, key) => {
+    const el = document.getElementById(id);
+    el.checked = settings[key];
+    el.addEventListener('change', () => {
+      settings[key] = el.checked;
+      saveSettings();
+    });
+  };
+  const bindRange = (id, key, valId, liveApply) => {
+    const el = document.getElementById(id);
+    const val = document.getElementById(valId);
+    el.value = settings[key];
+    val.textContent = settings[key];
+    el.addEventListener('input', () => {
+      settings[key] = Number(el.value);
+      val.textContent = el.value;
+      saveSettings();
+      if (liveApply) liveApply(settings[key]);
+    });
+  };
+  bindToggle('set-ec', 'echoCancel');
+  bindToggle('set-agc', 'agc');
+  bindToggle('set-eq', 'eq');
+  bindToggle('set-gate', 'gate');
+  bindRange('set-bass', 'bass', 'set-bass-v', (v) => {
+    if (eqNodes) eqNodes.low.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05);
+  });
+  bindRange('set-treble', 'treble', 'set-treble-v', (v) => {
+    if (eqNodes) eqNodes.high.gain.setTargetAtTime(v, audioCtx.currentTime, 0.05);
+  });
+  bindRange('set-gth', 'gateThreshold', 'set-gth-v', (v) => {
+    if (gateNode) gateNode.parameters.get('threshold').setTargetAtTime(v, audioCtx.currentTime, 0.05);
+  });
+  const micSel = document.getElementById('set-mic');
+  micSel.addEventListener('change', () => {
+    settings.micId = micSel.value;
+    saveSettings();
+  });
+}
+
+document.getElementById('gearBtn').addEventListener('click', async () => {
+  const panel = document.getElementById('settings');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) await populateMicList();
+});
+document.getElementById('set-done').addEventListener('click', () => {
+  document.getElementById('settings').classList.add('hidden');
+});
+bindSettings();
 
 // ── UI helpers ──────────────────────────────────────────────────
 
