@@ -72,6 +72,12 @@
       width: 100%; padding: 10px; border-radius: 999px; border: none;
       background: #22c55e; color: #fff; font-weight: 600; font-size: 0.9rem;
     }
+    button#muteBtn {
+      display: block; margin: 0.8rem auto 0;
+      font-size: 0.9rem; padding: 0.5rem 1.6rem;
+      background: #1a1a1a; color: #aaa; border: 1px solid #333;
+    }
+    button#muteBtn.muted { background: #f59e0b; color: #111; border-color: #f59e0b; }
   </style>
 </head>
 <body>
@@ -80,6 +86,7 @@
     <h1>darkmic</h1>
     <p class="subtitle">Using this device as your PC microphone</p>
     <button id="micBtn">Start Microphone</button>
+    <button id="muteBtn" hidden>Mute</button>
     <div id="status" class="status">Tap "Start Microphone" to begin</div>
     <div id="stats" class="stats"></div>
     <div id="levelbar" class="levelbar" hidden><div id="levelfill" class="levelbar-fill"></div></div>

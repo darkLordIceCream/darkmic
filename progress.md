@@ -121,6 +121,43 @@
 - **P2/P3（记录为决策/延后）**: gate 硬切无淡出 → 真机听感后决定（D-010）；多手机 level 互混 → v1 取舍记录（D-009）；SW 缓存 bump 纪律 → D-009。
 - 复验：vitest 24/24 + E2E **1775 chunks**（EQ+gate 启用全链路）。
 
+### 2026-11-14 (cont. #4) Session | 自主迭代 #3：F-012 真实音频延迟 + 监控（部分范围）
+
+**实现 | Implemented**:
+- **音频路径延迟（F-013 决策门的锚点指标）**: 12 字节 chunk 头（Float64BE 捕获时间戳 + Uint32BE 序号）+ {type:'chunkhdr'} 双侧协商（服务端 config 宣告 → 客户端确认 → 服务端才开始剥头）。服务端计算 capture→arrival 耗时 → stats.audioMs 广播。**假设 NTP 同步时钟**（模拟器实测 0ms = 同主机时钟，机制成立；真机数值 PENDING_REAL_DEVICE_TEST；跨设备时钟偏差精确校正留给 F-013，见 D-011）。
+- **抖动**: 服务端 50 帧到达间隔平均绝对偏差 → stats.jitterMs（模拟器实测 ≈30ms）。
+- **静音双向**: 手机 Mute 按钮（track.enabled 语义——静音但连接/统计/VB-Cable 信号保持活跃）↔ 仪表盘 Mute 按钮（{type:'mute'} / {type:'mute-cmd'}）；setMuted 幂等 + broadcastChange 参数（dashboard 驱动不回播）。
+- **码率曲线**: 仪表盘 BITRATE/60s canvas 曲线（1s 采样 stats 差分）。
+- 仪表盘 metrics 5→6 格（新增 Audio delay ±jitter）。
+
+**修复的会话内 bug**:
+- **协商闭环缺失**: 首版实现服务端只宣告 chunkhdr 未翻转自身 flag → 新客户端的 15 字节包会裸进解码器（破音）。仿真验证抓出后补齐双侧协商。
+- **字段名不匹配**: 服务端发 `chunkhdr`、客户端查 `msg.chunkHeader` → opt-in 永不触发。修正。
+- **setMuted 无回执**: dashboard 驱动的静音不广播状态 → 加 broadcastChange 参数 + 幂等守卫。
+
+**验证 | Verification**:
+- 仿真器（pm clear 后干净 profile 全流程）：audioMs=0（同钟）✓、jitterMs≈30 ✓、静音双向 ✓（dashboard→phone 生效于 UI；phone→dashboard 广播被 WS 客户端捕获）、E2E 回归 **1440 chunks**（headered wire format 全链路）✓。
+- 本地：typecheck + build 干净、vitest 24/24、client.js 语法 ✓。
+- QAInspector 聚焦审查：结论见提交记录。
+
+**F-012 剩余（见 D-011）**: PC 扬声器监听（需解码器抽出 pipe 的架构重构，延后）；wasapi 缓冲水位接线（PENDING_WINDOWS_TEST）；真机延迟数值 + NTP 假设验证（PENDING_REAL_DEVICE_TEST）。
+
+**QAInspector 审查（CONDITIONAL_PASS → P0 已修并复验）**:
+- 独立复证：vitest 24/24、typecheck/build、真实 WS 探针测协商+剥头、重连路径实证复现 P0、audioMs 时钟偏移双向失真实证（±2s → 0/2002）、jitter 窗口行为、静音帧流语义（headless Chromium fake-mic：enabled=false 后编码器持续产 3 字节静音帧 → 解码全零 PCM ✓）、mute 中继无回环、12/13 字节边界行为记录。
+- **P0（已修+复验）**: 重连不重新协商 chunkhdr → 12 字节头裸进解码器，且 opusscript 误解析**不抛错**（静默音频损坏，正好打在 F-010 重连主场景）。修复：客户端每连接重发 opt-in（去掉 `!chunkHeaderEnabled` 门）+ 服务端 stamp 合理性校验（>1.6e12 且 ≤now+5min 才剥头，否则透传让解码失败可见——协议自同步）。复验：两连接探针 10 帧 × 5 字节，零 17 字节泄漏。
+- **P1（已修）**: audioMs `Math.max(0,…)` 单边钳位把时钟偏移伪装成"完美 0ms"，会误导 F-013 WebRTC 决策门。修复：广播原始值（负数 = 时钟偏移信号）。
+- **P2（已修）**: 码率曲线首采样尖峰（基线化）；jitter 标签更名 "±arrival jitter ms"；mute-cmd 回执广播（dashboard 不会与手机状态失同步）；`payload.length >= 13` 边界。
+- **P2/P3（记录）**: 多手机 level 互混（D-009）；AGENTS.md 帧长更正 10ms→20ms 实测值（D-011）；手机 byteCount 含头（外观偏差）；muted 不持久化（有意：静音是会话意图）。
+- 复验：typecheck + vitest 24/24 + 探针帧分析全 5 字节。
+
+## 自主迭代停止原因（goal 条件 2）| Stop Reason
+
+截至本次会话结束，**所有可在 macOS 本机验证的工作已完成**（F-009 稳定性 + F-010 手机可靠性 + F-011 浏览器 DSP + F-012 监控主体，三轮完整迭代全部通过 vitest/typecheck/build/init.sh + 仿真器 E2E + QAInspector 独立审查）。剩余工作**全部**需要以下不可用资源：
+1. **Windows 真机**：F-008 安装器（编写+实装验证）；F-009 的 BUG-001 真机 E2E；F-013 wasapi 缓冲调优（WinMM 实测）；wasapi 缓冲水位接线与验证。
+2. **物理手机**：F-010/F-011/F-012 的 PENDING_REAL_DEVICE_TEST 清单（锁屏采集、真实音频听感、真实延迟数值、EQ/门耳调、Wake Lock API）。
+3. **用户决策**：F-006 WebRTC 决策门需要 F-012 真机延迟数据；F-014 AI 降噪的听感验证（模拟器静音麦无法验证音频正确性，按 D-010 同逻辑延后）。
+F-015（Rust 评估）按 D-003 维持排队（低优先并行工作流，且其 BlackHole 基准可在后续 macOS 会话随时开展）。
+
 ### 2026-11-14 (cont.) Session | 仿真器 E2E 测试台（手机端自动化验证）
 
 **目的 | Motivation**: 用户提出用安卓模拟器代替"真机扫码"，让 F-010/F-011 等手机端功能在 macOS 上即可自动化验证。模拟器 Brave = 标准 Chromium 客户端，可全自动打开 URL、过证书警告、授权麦克风、点击开始。

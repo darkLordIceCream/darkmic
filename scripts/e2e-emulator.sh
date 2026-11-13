@@ -122,8 +122,14 @@ adb_do shell am start -n "com.brave.browser/org.chromium.chrome.browser.ChromeTa
   -a android.intent.action.VIEW -d "$URL" >/dev/null
 sleep 3
 
-# First-run onboarding (skipped on a warm device): cancel/continue/skip steps.
-tap_when_visible 6 "CANCEL" "Maybe later" "Continue" "Accept & continue" || true
+# First-run onboarding (fresh profile): Brave shows several sequential
+# screens — tap through them one by one until the phone page (or a blank
+# new tab with the omnibox) is reachable.
+ONBOARD_DEADLINE=$(( $(date +%s) + 30 ))
+while [ "$(date +%s)" -lt "$ONBOARD_DEADLINE" ]; do
+  if ui_center "Start Microphone" >/dev/null 2>&1; then break; fi
+  tap_when_visible 2 "CANCEL" "Maybe later" "Continue" "Accept & continue" || sleep 1
+done
 
 # If the intent was swallowed by onboarding, the omnibox may be focused on a
 # blank new tab — type the URL as a fallback.

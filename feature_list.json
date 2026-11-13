@@ -117,8 +117,8 @@
       "description": "Phase 4 of the 2026-11-14 roadmap. Replace the WS RTT/2 approximation with real audio-path latency (send timestamps attached per chunk, aligned at decode time); dashboard distinguishes signaling RTT vs audio latency. New dashboard metrics: jitter (arrival interval variance), bitrate history graph (canvas), buffer watermark (wasapi accumulator via WasapiOutput.stats()). Mute button (phone ↔ dashboard messages) + PC speaker monitoring (tap output reusing ffplay mode capability).",
       "descriptionZh": "2026-11-14 路线图 Phase 4。用真实音频链路延迟替换 WS RTT/2 近似（编码帧附发送时间戳，解码时刻对齐计算）；仪表盘区分信令 RTT 与音频延迟。新增指标：抖动（到达间隔方差）、码率历史曲线（canvas）、缓冲水位（wasapi 累积器，经 WasapiOutput.stats()）。静音按钮（手机 ↔ 仪表盘互发消息）+ PC 扬声器监听（复用 ffplay 模式能力做 tap 输出）",
       "dependencies": ["F-011"],
-      "status": "not-started",
-      "evidence": ""
+      "status": "in-progress",
+      "evidence": "Partial implementation, locally verified (2026-11-14). DONE: (1) audio-path delay — client attaches a 12-byte header (Float64BE wall-clock stamp + Uint32BE seq) to each chunk, negotiated via {type:'chunkhdr'} opt-in (server announces chunkhdr:true in config, client confirms, server then strips); server computes capture-to-arrival age → broadcast in stats.audioMs; emulator measures audioMs=0 (same-clock) — mechanism proven, real-device values pending. (2) Jitter — server rolling 50-frame arrival-interval mean-absolute-deviation → stats.jitterMs (measured ≈30ms on emulator). (3) Mute bidirectional — phone Mute button (track.enabled semantics, silence keeps flowing) ↔ dashboard Mute button ({type:'mute'} / {type:'mute-cmd'}), setMuted idempotent with broadcastChange flag. (4) Bitrate history — dashboard canvas sparkline, 1s samples from stats deltas, 60s window. Dashboard now 6 metric cells. E2E regression 1440 chunks with headered wire format. REMAINING: PC speaker monitoring (needs decode-out-of-pipe refactor — deferred, D-011); wasapi buffer watermark wiring (PENDING_WINDOWS_TEST — WasapiOutput.stats() exists); real-device latency values + NTP-assumption validation (PENDING_REAL_DEVICE_TEST)."
     },
     {
       "id": "F-013",

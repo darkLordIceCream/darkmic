@@ -188,11 +188,31 @@
   /* ── Metrics row ─────────────────────────────────── */
   .metrics {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 1px;
     background: var(--border);
     border: 1px solid var(--border);
   }
+
+  .bitrate-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    position: relative;
+  }
+  .bitrate-wrap::before {
+    content: 'BITRATE / 60s';
+    position: absolute;
+    top: -9px;
+    left: 20px;
+    background: var(--bg);
+    padding: 0 10px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+  }
+  #bitrate { display: block; width: 100%; height: 36px; }
 
   .metric {
     background: var(--surface);
@@ -344,6 +364,7 @@
         <div class="status-dot"></div>
         <span id="status-text">idle</span>
       </div>
+      <button class="btn-exit" id="btn-mute">Mute</button>
       <button class="btn-exit" id="btn-exit" title="Shut down darkmic">Exit</button>
     </div>
   </div>
@@ -384,12 +405,19 @@
           <div class="metric-unit">one-way ms</div>
         </div>
         <div class="metric">
+          <div class="metric-label">Audio delay</div>
+          <div class="metric-value live" id="metric-audio">—</div>
+          <div class="metric-unit" id="metric-audio-unit">±arrival jitter ms</div>
+        </div>
+        <div class="metric">
           <div class="metric-label">Level</div>
           <div class="metric-value live" id="metric-level">—</div>
           <div class="metric-unit">dBFS phone</div>
           <div class="levelbar"><div class="levelbar-fill" id="metric-level-fill"></div></div>
         </div>
       </div>
+
+      <div class="bitrate-wrap"><canvas id="bitrate" width="820" height="36"></canvas></div>
 
       <div class="log-panel">
         <div class="log-entries" id="log-entries">
@@ -439,6 +467,8 @@ const metricUptime = document.getElementById('metric-uptime');
 const metricLatency = document.getElementById('metric-latency');
 const metricLevel = document.getElementById('metric-level');
 const metricLevelFill = document.getElementById('metric-level-fill');
+const metricAudio = document.getElementById('metric-audio');
+const metricAudioUnit = document.getElementById('metric-audio-unit');
 let totalBytes = 0;
 let totalChunks = 0;
 let startTime = null;
@@ -467,6 +497,56 @@ document.getElementById('btn-exit')?.addEventListener('click', async () => {
   if (!confirm('Shut down darkmic server?')) return;
   try { await fetch('/api/exit', { method: 'POST' }); } catch { /* server already gone */ }
 });
+
+// ── Mute button (F-012) ─────────────────────────────
+
+const btnMute = document.getElementById('btn-mute');
+let mutedState = false;
+btnMute?.addEventListener('click', () => {
+  mutedState = !mutedState;
+  btnMute.textContent = mutedState ? 'Unmute' : 'Mute';
+  btnMute.style.borderColor = mutedState ? 'var(--warn)' : '';
+  btnMute.style.color = mutedState ? 'var(--warn)' : '';
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'mute-cmd', on: mutedState }));
+  }
+  log(mutedState ? 'mute → phone' : 'unmute → phone', 'info');
+});
+
+// ── Bitrate sparkline (F-012) ───────────────────────
+
+const bitrateCanvas = document.getElementById('bitrate');
+const bctx = bitrateCanvas?.getContext('2d');
+const bitrateHistory = [];
+let bitrateLastBytes = null; // null until the first stats sample — avoids a startup spike
+
+setInterval(() => {
+  if (bitrateLastBytes === null) {
+    bitrateLastBytes = totalBytes; // baseline: don't treat session-total as a 1s rate
+    return;
+  }
+  const rate = Math.max(0, totalBytes - bitrateLastBytes);
+  bitrateLastBytes = totalBytes;
+  bitrateHistory.push(rate);
+  if (bitrateHistory.length > 60) bitrateHistory.shift();
+  if (!bctx) return;
+  const w = bitrateCanvas.width;
+  const h = bitrateCanvas.height;
+  bctx.clearRect(0, 0, w, h);
+  const max = Math.max(1, ...bitrateHistory);
+  bctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent') || '#22c55e';
+  bctx.lineWidth = 1.5;
+  bctx.beginPath();
+  bitrateHistory.forEach((v, i) => {
+    const x = (i / 59) * w;
+    const y = h - (v / max) * (h - 4) - 2;
+    if (i === 0) bctx.moveTo(x, y); else bctx.lineTo(x, y);
+  });
+  bctx.stroke();
+  bctx.fillStyle = 'rgba(160,160,160,0.7)';
+  bctx.font = '10px monospace';
+  bctx.fillText(`${formatBytes(rate)}/s`, 4, 12);
+}, 1000);
 
 // ── WebSocket for state/metric log ─────────────────
 
@@ -504,6 +584,13 @@ ws.onmessage = (event) => {
         metricBytes.textContent = formatBytes(totalBytes);
         metricChunks.textContent = totalChunks.toString();
         if (!startTime) startTime = Date.now();
+        // F-012: audio-path delay (capture→arrival, NTP-clock approximation)
+        if (typeof msg.audioMs === 'number') {
+          metricAudio.textContent = msg.audioMs.toString();
+        }
+        if (typeof msg.jitterMs === 'number') {
+          metricAudioUnit.textContent = `±${msg.jitterMs} jitter ms`;
+        }
         break;
       case 'latency':
         metricLatency.textContent = msg.ms.toString();
@@ -515,6 +602,18 @@ ws.onmessage = (event) => {
           Math.max(0, Math.min(100, ((v + 60) / 60) * 100)).toFixed(0) + '%';
         break;
       }
+      case 'mute':
+        // Phone-side mute state (mirrored by btn-mute click below)
+        btnMute.textContent = msg.on ? 'Unmute' : 'Mute';
+        btnMute.style.borderColor = msg.on ? 'var(--warn)' : '';
+        btnMute.style.color = msg.on ? 'var(--warn)' : '';
+        mutedState = !!msg.on;
+        log(`phone ${msg.on ? 'muted' : 'unmuted'}`, 'info');
+        break;
+      case 'mute-cmd':
+        btnMute.textContent = msg.on ? 'Unmute' : 'Mute';
+        mutedState = !!msg.on;
+        break;
     }
   } catch {}
 };

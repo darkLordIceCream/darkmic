@@ -9,6 +9,7 @@ const statsEl = document.getElementById('stats');
 const levelBar = document.getElementById('levelbar');
 const levelFill = document.getElementById('levelfill');
 const levelDb = document.getElementById('leveldb');
+const muteBtn = document.getElementById('muteBtn');
 
 // ── PWA service worker (F-010) ───────────────────────────────────
 // Caches the phone shell so the page still opens when the server briefly
@@ -61,6 +62,10 @@ const DEFAULT_SETTINGS = {
 };
 
 let settings = loadSettings();
+
+// F-012: per-chunk capture timestamps (server enables via {type:'config'})
+let chunkHeaderEnabled = false;
+let muted = false;
 
 function loadSettings() {
   let saved = {};
@@ -167,6 +172,28 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('online', forceReconnectNow);
 
+// ── Mute (F-012) ─────────────────────────────────────────────────
+// Muting disables the mic track — the encoder keeps emitting silence so the
+// server pipe stays alive and stats keep flowing (hardware-mute semantics).
+
+function setMuted(on, broadcastChange = true) {
+  if (muted === on) return; // idempotent: mute-cmd echoes must not re-broadcast
+  muted = on;
+  if (rawStream) rawStream.getAudioTracks().forEach((t) => (t.enabled = !on));
+  if (muteBtn) {
+    muteBtn.textContent = on ? 'Unmute' : 'Mute';
+    muteBtn.className = on ? 'muted' : '';
+  }
+  updateStats();
+  // Inform the dashboard (server broadcasts it). Dashboard-driven mutes
+  // pass broadcastChange=false — the dashboard already knows.
+  if (broadcastChange && ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'mute', on: muted }));
+  }
+}
+
+muteBtn.addEventListener('click', () => setMuted(!muted));
+
 // ── Main flow ────────────────────────────────────────────────────
 
 micBtn.addEventListener('click', () => {
@@ -211,6 +238,9 @@ async function start() {
       }
       throw err;
     });
+
+    // Re-apply mute intent from a previous session (F-012)
+    if (rawStream) rawStream.getAudioTracks().forEach((t) => (t.enabled = !muted));
 
     // 1b. Capture graph: mic → [gate] → [AGC] → [EQ] → analyser tap → encoder
     // (F-011: each stage toggleable from the settings panel)
@@ -323,6 +353,22 @@ async function connectAndStream() {
             }
           } else if (msg.type === 'config' && typeof msg.initialBitrate === 'number') {
             serverInitialBitrate = msg.initialBitrate;
+            // Re-confirm on EVERY connection: the server's strip flag is
+            // per-connection, so a reconnect that skips the opt-in would feed
+            // headered chunks into the decoder unstripped (QAInspector P0,
+            // 2026-11-14). The server handles repeats idempotently.
+            if (msg.chunkhdr === true) {
+              chunkHeaderEnabled = true;
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'chunkhdr', on: true }));
+              }
+            }
+          } else if (msg.type === 'mute-cmd' && isRunning) {
+            // Dashboard-driven mute (single-phone v1, decisions D-009 spirit).
+            // Broadcast the applied state back so the dashboard can never
+            // desync from the phone (QAInspector P2-4); no loop — the phone
+            // ignores {type:'mute'} messages.
+            setMuted(!!msg.on, true);
           }
         } catch { /* ignore */ }
       }
@@ -357,11 +403,22 @@ async function connectAndStream() {
     encoder = new AudioEncoder({
       output: (chunk) => {
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
-        const buf = new Uint8Array(chunk.byteLength);
-        chunk.copyTo(buf);
-        ws.send(buf);
         chunkCount++;
-        byteCount += buf.length;
+        byteCount += chunk.byteLength;
+        if (chunkHeaderEnabled) {
+          // F-012 wire format: [Float64BE capture wall-clock ms][Uint32BE seq][opus packet]
+          // The server strips the header; seq is informational.
+          const frame = new Uint8Array(12 + chunk.byteLength);
+          const view = new DataView(frame.buffer);
+          view.setFloat64(0, Date.now());
+          view.setUint32(8, chunkCount);
+          chunk.copyTo(new Uint8Array(frame.buffer, 12, chunk.byteLength));
+          ws.send(frame);
+        } else {
+          const buf = new Uint8Array(chunk.byteLength);
+          chunk.copyTo(buf);
+          ws.send(buf);
+        }
         if (chunkCount % 10 === 0) updateStats();
       },
       error: (e) => {
@@ -402,6 +459,9 @@ async function connectAndStream() {
     levelBar.hidden = false;
     levelDb.hidden = false;
     levelTimer = setInterval(updateLevelMeter, 500);
+
+    // Mute button visible while streaming (F-012)
+    muteBtn.hidden = false;
 
     // 5. Read loop
     readLoop();
@@ -500,6 +560,7 @@ function stop() {
   levelBar.hidden = true;
   levelDb.hidden = true;
   levelFill.style.width = '0%';
+  muteBtn.hidden = true;
   if (ws) {
     ws.onopen = null;
     ws.onclose = null;
@@ -653,5 +714,6 @@ function updateStats() {
   if (latencyMs > 0) {
     text += ` · ${Math.round(latencyMs / 2)}ms`;
   }
+  if (muted) text = 'MUTED · ' + text;
   statsEl.textContent = text;
 }

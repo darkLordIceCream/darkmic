@@ -156,12 +156,24 @@ wss.on('connection', (ws) => {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: 'url', url: lanUrl || '' }));
     ws.send(JSON.stringify({ type: 'vbcable', installed: vbcableInstalled }));
-    ws.send(JSON.stringify({ type: 'config', initialBitrate: config.initialBitrate }));
+    ws.send(JSON.stringify({ type: 'config', initialBitrate: config.initialBitrate, chunkhdr: true }));
   }
 
   let audioPipeActive = false;
   let chunkCount = 0;
   let totalBytes = 0;
+  // F-012: per-chunk capture timestamps + arrival jitter (opt-in per connection)
+  let chunkHeader = false;
+  let lastArrive = 0;
+  let audioDelayMs: number | undefined;
+  const arriveDeltas: number[] = [];
+
+  function computeJitter(): number | undefined {
+    if (arriveDeltas.length < 2) return undefined;
+    const mean = arriveDeltas.reduce((a, b) => a + b, 0) / arriveDeltas.length;
+    const mad = arriveDeltas.reduce((a, b) => a + Math.abs(b - mean), 0) / arriveDeltas.length;
+    return Math.round(mad * 10) / 10;
+  }
 
   function ensureAudioPipe(): AudioPipe | null {
     if (audioPipeActive) return null;
@@ -193,13 +205,44 @@ wss.on('connection', (ws) => {
         if (!audioPipe) return;
       }
 
+      let payload = data as Buffer;
+      if (chunkHeader && payload.length >= 13) {
+        // F-012 wire format: [Float64BE capture wall-clock ms][Uint32BE seq][opus packet].
+        // Strip only when the stamp parses as a plausible epoch — this makes
+        // the protocol self-syncing even if a client skips the opt-in
+        // (QAInspector P0/P2-3 hardening): implausible stamps leave the
+        // payload intact so decode failures surface in the log instead of
+        // corrupting audio silently.
+        const stampMs = payload.readDoubleBE(0);
+        const now = Date.now();
+        if (stampMs > 1.6e12 && stampMs <= now + 5 * 60 * 1000) {
+          payload = payload.subarray(12);
+          // Capture-to-arrival age. Raw value (can be negative on skewed
+          // clocks): clamping at 0 would disguise clock skew as a perfect
+          // 0ms and mislead the F-013 decision gate (QAInspector P1-1).
+          audioDelayMs = Math.round(now - stampMs);
+        }
+      }
+      const now = Date.now();
+      if (lastArrive > 0) {
+        arriveDeltas.push(now - lastArrive);
+        if (arriveDeltas.length > 50) arriveDeltas.shift();
+      }
+      lastArrive = now;
+
       chunkCount++;
-      totalBytes += (data as Buffer).length;
-      audioPipe.write(data as Buffer);
+      totalBytes += payload.length;
+      audioPipe.write(payload);
       console.log(
-        `Chunk #${chunkCount}: ${(data as Buffer).length} bytes (total ${totalBytes})`,
+        `Chunk #${chunkCount}: ${payload.length} bytes (total ${totalBytes})`,
       );
-      broadcast({ type: 'stats', bytes: totalBytes, chunks: chunkCount });
+      broadcast({
+        type: 'stats',
+        bytes: totalBytes,
+        chunks: chunkCount,
+        audioMs: audioDelayMs,
+        jitterMs: computeJitter(),
+      });
     } else {
       // Text messages: ping/pong relay for latency measurement, level relay
       try {
@@ -210,6 +253,12 @@ wss.on('connection', (ws) => {
           broadcast({ type: 'latency', ms: msg.ms });
         } else if (msg.type === 'level' && Number.isFinite(msg.v)) {
           broadcast({ type: 'level', v: msg.v }); // phone level meter → dashboard (F-011)
+        } else if (msg.type === 'chunkhdr' && msg.on === true) {
+          chunkHeader = true; // client opts into the F-012 timestamp header
+        } else if (msg.type === 'mute' && typeof msg.on === 'boolean') {
+          broadcast({ type: 'mute', on: msg.on }); // phone mute state → dashboard (F-012)
+        } else if (msg.type === 'mute-cmd' && typeof msg.on === 'boolean') {
+          broadcast({ type: 'mute-cmd', on: msg.on }); // dashboard → phone (F-012)
         }
       } catch { /* ignore malformed JSON */ }
     }

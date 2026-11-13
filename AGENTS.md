@@ -36,7 +36,7 @@ Mobile device (Chromium)               Windows PC (darkmic.exe)
 
 ### Phase 1 (current): WebCodecs AudioEncoder + WebSocket
 
-Phone uses `AudioEncoder` (WebCodecs API) to encode raw PCM → Opus at ~10ms granularity, with AGC (`DynamicsCompressorNode`) and adaptive bitrate (32↔64kbps based on measured latency). Server decodes Opus → PCM via `opusscript` (pure JS), then pipes PCM via WinMM waveOut API to VB-Cable virtual audio device. ~80ms end-to-end latency.
+Phone uses `AudioEncoder` (WebCodecs API) to encode raw PCM → Opus at ~20ms granularity (Chrome default frame, measured), with AGC (`DynamicsCompressorNode`) and adaptive bitrate (32↔64kbps based on measured latency). Server decodes Opus → PCM via `opusscript` (pure JS), then pipes PCM via WinMM waveOut API to VB-Cable virtual audio device. ~80ms end-to-end latency.
 
 > Phase 1 使用 WebCodecs AudioEncoder 编码，带 AGC 自动增益和自适应码率（根据实测延迟自动切换 32↔64kbps）。服务端通过 opusscript 纯 JS 解码，经 WinMM waveOut API 输出到 VB-Cable 虚拟声卡，延迟约 80ms。
 
