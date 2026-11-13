@@ -7,6 +7,27 @@ const micBtn = document.getElementById('micBtn');
 const statusEl = document.getElementById('status');
 const statsEl = document.getElementById('stats');
 
+// ── PWA service worker (F-010) ───────────────────────────────────
+// Caches the phone shell so the page still opens when the server briefly
+// disappears; live streaming never depends on it.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(
+      (reg) => console.log('SW registered, scope:', reg && reg.scope),
+      (err) => {
+        // Offline shell is a bonus — never break streaming over it, but a
+        // silent failure here is undebuggable (same lesson as F-009).
+        // Note: Chromium rejects the SW script fetch when the server's TLS
+        // cert is untrusted (self-signed) even if the user bypassed the
+        // interstitial — registration then fails with "An SSL certificate
+        // error occurred when fetching the script". Expected with the
+        // self-signed setup; engages automatically with a trusted cert.
+        console.error('Service worker registration failed:', err && err.message);
+      }
+    );
+  });
+}
+
 let encoder = null;
 let ws = null;
 let stream = null;
@@ -52,6 +73,51 @@ function cancelReconnect() {
   }
   reconnectAttempts = 0;
 }
+
+// ── Wake Lock + recovery reconnects (F-010) ──────────────────────
+
+let wakeLock = null;
+let wakeLockPending = false; // in-flight guard: two callers racing must not double-acquire
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator) || wakeLock || wakeLockPending) return;
+  wakeLockPending = true;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (_) {
+    // Denied (e.g. low battery, page hidden): streaming still works,
+    // the screen may sleep on its own.
+    wakeLock = null;
+  } finally {
+    wakeLockPending = false;
+  }
+}
+
+function releaseWakeLock() {
+  if (!wakeLock) return;
+  try { wakeLock.release(); } catch (_) { /* already released */ }
+  wakeLock = null;
+}
+
+function forceReconnectNow() {
+  if (!isRunning) return;
+  // Already connected or connecting — nothing to recover.
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+  cancelReconnect(); // skip the remaining backoff delay
+  setStatus('Reconnecting now...', '');
+  connectAndStream();
+}
+
+// Backgrounding auto-releases the screen wake lock and can kill a stalled
+// socket. On return to the foreground: re-acquire the lock and reconnect
+// immediately if the socket died. 'online' covers Wi-Fi / flight-mode recovery.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !isRunning) return;
+  requestWakeLock();
+  forceReconnectNow();
+});
+window.addEventListener('online', forceReconnectNow);
 
 // ── Main flow ────────────────────────────────────────────────────
 
@@ -104,6 +170,19 @@ async function start() {
 async function connectAndStream() {
   // Clean up any previous encoder/ws before reconnect
   cleanupEncoder();
+
+  // Detach the old socket's handlers and close it: a socket left in CLOSING
+  // fires its onclose after this reconnect is already streaming, scheduling a
+  // second reconnect that tears the new one down — a reconnect storm that
+  // leaks server-side pipes (QAInspector P1, 2026-11-14).
+  if (ws) {
+    ws.onopen = null;
+    ws.onmessage = null;
+    ws.onclose = null;
+    ws.onerror = null;
+    try { ws.close(); } catch (_) { /* already closing */ }
+    ws = null;
+  }
 
   try {
     setStatus('Connecting to server...', '');
@@ -196,6 +275,7 @@ async function connectAndStream() {
     micBtn.className = 'mic-off';
     setStatus('Streaming...', 'connected');
     updateStats();
+    requestWakeLock(); // keep the screen on while streaming (F-010)
 
     latencyMs = 0;
     pingTimer = setInterval(() => {
@@ -265,6 +345,7 @@ function handleStartError(err) {
 function stop() {
   isRunning = false;
   cancelReconnect();
+  releaseWakeLock();
 
   if (pingTimer) {
     clearInterval(pingTimer);

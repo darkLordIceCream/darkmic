@@ -66,6 +66,36 @@
 - **BUG-001 真机验证（用户操作）**: Windows 上双击 release exe → 手机连接 → 点停止 → 确认 uptime 停止计时且音频关闭；恢复再停止重复一次。通过后 BUG-001 与 F-009 均转 done。
 - F-008（Phase 1）为下一实现项。
 
+### 2026-11-14 (cont. #2) Session | 自主迭代 #1：F-010 手机端可靠性（章程首次全流程）
+
+**优先级决策（D-007）**: 本机为 macOS-only 会话 → F-008（安装器）只能编写无法执行验证 → 改做 F-010（仿真器可完整验证），F-008 排队到 Windows 会话，F-015 维持 D-003 排队。
+
+**实现 | Implemented**:
+- `public/client.js`: ① Screen Wake Lock——流采集期间持锁、Stop 释放、页面可见恢复时重申请（API 不存在/被拒时静默降级）；② 重连强化——`forceReconnectNow()`：visibilitychange（可见）与 online 事件触发 `cancelReconnect()` 跳过退避立即重连；③ SW 注册带错误日志（F-009 教训：不再静默吞错）。
+- `public/index.html`: manifest link + theme-color + favicon。
+- `public/manifest.webmanifest` + `public/sw.js`: 离线壳——/phone network-first（离线回退缓存壳），静态资源 cache-first（CACHE=darkmic-shell-v1），/api/* 与 WebSocket 不缓存，dashboard 不提供离线壳（无服务器时无意义）。
+- `scripts/gen-icons.mjs` + `public/icons/icon-{192,512}.png`: 纯 Node PNG 编码器（zlib+CRC32，4x 超采样圆角麦克风图形），零新依赖。
+
+**仿真器验证 | Emulator verification**:
+- E2E 回归 PASS ×2（1880 chunks @旧证书、1930 chunks @新 IP-SAN 证书）；自适应码率正常（1ms 延迟→64kbps）。
+- **Wake Lock**: 流采集时 `dumpsys power` 显示 `SCREEN_BRIGHT_WAKE_LOCK 'WindowManager/displayId:0' ON_AFTER_RELEASE ws=WorkSource{com.brave.browser}`，Stop 后消失。
+- **重连强化（核心）**: 流采集中杀服务端 → 客户端显示 `Reconnecting in 30s... (7/10)`（退避已到 30s 档）→ 重启服务端 + HOME→重开 Brave → 服务端日志立即出现新连接并恢复出流（~2-5s，对比 30s 退避档）——visibilitychange 路径实证；online 事件接同一 forceReconnectNow。
+- **PWA**: manifest/SW/图标均正确服务；图标渲染检查通过。
+- 本地检查：typecheck + build 干净，vitest 24/24。
+
+**重要发现（D-008）| Key finding**: 自签证书架构下，Chromium（Brave 1.99）拒绝 SW 脚本抓取（"An SSL certificate error occurred when fetching the script"，经状态行诊断确认）——**SW 离线壳/PWA 安装/Wake Lock API 在真实用户场景同样不可用**，属架构限制而非代码 bug。模拟器系统 CA 安装无效（Brave 用内置 Chrome Root Store）。SW 壳保留为受信证书场景的渐进增强；全局可用的恢复 UX 是重连强化（不依赖安全上下文）；屏幕常亮由 Chromium 采集路径兜底（dumpsys 实证）。
+
+**仿真器环境升级（复用价值）| Test-env upgrades**: 测试证书重生成带 IP SAN（openssl，certs/ 本机文件）；`adb root`+`adb remount` 装系统 CA（需 `-writable-system` 启动，`adb reboot` 后 writable 失效需重做）；`adb reverse tcp:3100 tcp:3100` + `https://localhost:3100/phone` 用于安全上下文实验。
+
+**QAInspector 独立审查（CONDITIONAL_PASS，全项修复后收敛）**:
+- 独立复证：vitest 24/24、typecheck/build 干净、静态资源 MIME 检查、**macOS headless Chrome（受信 TLS）SW 离线壳 12/12 项通过**（补齐仿真器给不了的 SW 代码正确性证据）、headless 流式+重连生命周期 10 项行为（含 online 守卫不误重连、退避爬升、跳过退避 300ms 内生效、stop() 清理）、独立复跑 e2e-emulator.sh（1885 chunks）、1985/1985 帧解码合法、SSL 声明经 Chromium issue tracker 文档核实属实。
+- **P1（已修）**: connectAndStream 不摘除旧 ws 的 handlers → CLOSING 竞态可致重连风暴 + 服务端管道泄漏。修复：连接前摘除 onopen/onmessage/onclose/onerror 并 ws.close()。
+- **P2（已修）**: sw.js 两处缓存 put 前补 `res.ok` 检查（404 页面会被永久缓存）；pc.html 补 favicon link；requestWakeLock 加 in-flight 守卫防双申请竞态；e2e-emulator.sh 服务端启动改 `exec`（trap 能真正杀掉 node 子进程，实测退出后无泄漏端口）。
+- **P2（记录为设计取舍/建议）**: cancelReconnect 重置 attempts 属"恢复触发=重置预算"语义（QAInspector 实测语义正确，保留）；sw.js 缓存版本号需发布时手动 bump（受信证书场景才生效，发布清单项）；"Wake Lock 已验证"表述修正——client.js 的 wakeLock 代码路径从未在真实安全上下文执行过（自签证书下 API 不存在），dumpsys 证明的常亮锁来自 Chromium 采集路径。
+- 复验：vitest 24/24 + E2E 1385 chunks + 脚本退出无泄漏端口。
+
+**遗留 | Remaining**: F-010 状态 = PENDING_REAL_DEVICE_TEST（锁屏后台采集、真实网络重连、PWA 安装流程、受信证书下的 Wake Lock API 待真机）；F-008 下一 Windows 会话。
+
 ### 2026-11-14 (cont.) Session | 仿真器 E2E 测试台（手机端自动化验证）
 
 **目的 | Motivation**: 用户提出用安卓模拟器代替"真机扫码"，让 F-010/F-011 等手机端功能在 macOS 上即可自动化验证。模拟器 Brave = 标准 Chromium 客户端，可全自动打开 URL、过证书警告、授权麦克风、点击开始。

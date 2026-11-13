@@ -89,8 +89,11 @@ if curl -sk -o /dev/null "https://localhost:$PORT"; then
   EXTERNAL_SERVER=1
 else
   EXTERNAL_SERVER=0
-  # Launch from $WORK so the file-mode output lands in $WORK/darkmic-audio.raw
-  (cd "$WORK" && AUDIO_PIPE_MODE=file PORT=$PORT node "$ROOT/dist/index.js" > "$SERVER_LOG" 2>&1) &
+  # Launch from $WORK so the file-mode output lands in $WORK/darkmic-audio.raw.
+  # exec inside the subshell makes $! the node pid itself — the EXIT trap can
+  # then actually kill the server (a plain background subshell would leak it,
+  # QAInspector P2 2026-11-14).
+  (cd "$WORK" && AUDIO_PIPE_MODE=file PORT=$PORT exec node "$ROOT/dist/index.js" > "$SERVER_LOG" 2>&1) &
   SERVER_PID=$!
   trap '[ $KEEP_SERVER -eq 1 ] || { kill $SERVER_PID 2>/dev/null || true; }' EXIT
   for _ in $(seq 1 20); do
