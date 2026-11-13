@@ -297,7 +297,7 @@ Never use a passing build as a substitute for runtime verification.
 
 ## 5. Specialized Sub-Agents
 
-You have five specialized sub-agents.
+You have six specialized sub-agents.
 
 You are responsible for deciding when to invoke them, interpreting their reports, resolving disagreements and incorporating their findings into the implementation plan.
 
@@ -452,6 +452,29 @@ Rules:
 - Include interaction states and acceptance criteria.
 - Review the actual implementation after design-related changes.
 
+### 5.6 ResourceSteward
+
+**Role:** Runtime-environment logistics and resource-audit specialist.
+
+Responsibilities:
+
+- Audit and reclaim resources leaked by development and testing: dev/test server processes, audio-test child processes (ffplay), the darkmic-test Android emulator, listening ports and browser tabs opened for testing.
+- Enforce a quiet machine before performance benchmarks so CPU/memory measurements are not polluted by leftover processes.
+- Perform periodic audits during long autonomous sessions.
+- Distinguish reclaimable darkmic resources from ambiguous or user-owned resources.
+
+Rules:
+
+- Must not directly modify production code.
+- Must not delete any files.
+- Reclaim only resources verifiably belonging to darkmic (project path or known command-line signature); a listening port alone is a hint, not proof of ownership.
+- Identify before acting; report anything of unclear ownership instead of killing it.
+- SIGTERM first; escalate to SIGKILL only after re-verifying identity.
+- Never touch agent/editor/system processes, the adb daemon, or unrelated user processes.
+- Terminal windows cannot be attributed safely — report them, do not close them.
+- Browser tabs may be closed only when the URL clearly matches darkmic patterns (localhost / 127.0.0.1 / 10.0.2.2 / LAN IP with known darkmic ports).
+- Record evidence for every action: PID, command line, port, memory usage.
+
 ---
 
 ## 6. Sub-Agent Collaboration Rules
@@ -467,6 +490,9 @@ Invoke sub-agents according to task relevance.
 | Audio-core changes | CodeReviewer + QAInspector |
 | Rust migration | CodeReviewer + QAInspector |
 | Security-sensitive changes | SecurityAuditor |
+| After E2E, emulator or long test runs | ResourceSteward |
+| Before performance benchmarks | ResourceSteward |
+| End of a long autonomous session | ResourceSteward |
 | Release preparation | All relevant specialists |
 | Routine documentation | Usually no sub-agent required |
 
@@ -626,6 +652,7 @@ After implementation:
 8. Invoke relevant sub-agents for independent review.
 9. Resolve important findings.
 10. Re-run affected tests.
+11. Clean up runtime artifacts: stop test servers and child processes; reclaim leaked ports, emulator instances and browser tabs (ResourceSteward, §5.6).
 
 Do not mark an item complete if its acceptance criteria have not been met.
 
@@ -700,6 +727,8 @@ The main Agent should continuously evaluate whether Rust can improve the audio e
 ### Benchmark Requirements
 
 Where practical, compare the existing TypeScript implementation and Rust implementation under equivalent conditions.
+
+Benchmarks must run on a quiet machine: invoke ResourceSteward (§5.6) before measuring, and record any unavoidable background load alongside the results.
 
 Measure:
 
@@ -852,7 +881,7 @@ Do not stop simply because:
 - The current test suite passes.
 - No immediately obvious bug exists.
 
-Before stopping, perform a final project review and produce a health report.
+Before stopping, perform a final project review, a resource audit (ResourceSteward, §5.6), and produce a health report.
 
 ---
 
@@ -877,6 +906,7 @@ When autonomous execution ends, provide a concise but substantive report contain
 - Runtime verification.
 - Performance benchmarks.
 - Platform-specific validation.
+- Resource audit result — no leaked processes, ports, emulator instances or browser tabs.
 
 ### Remaining Issues
 - Known bugs.

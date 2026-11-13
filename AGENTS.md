@@ -166,6 +166,7 @@ A feature is done only when ALL of the following are true:
 3. Record unresolved blockers/risks | 记录未解决的阻塞项和风险
 4. Commit with descriptive message | 提交并写好描述
 5. Leave repo clean for `./init.sh` | 保持仓库可重新启动
+6. Stop test servers/child processes; verify no leaked ports, emulator instances or browser tabs (ResourceSteward) | 停止测试进程，确认无泄漏的端口/模拟器/浏览器标签页
 
 ## Developer Commands | 开发命令
 
